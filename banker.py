@@ -9,9 +9,11 @@ class plyr:
     list=[]
     map=0
 
-client = discord.Client(intents=discord.Intents.all()
+client = discord.Client(intents=discord.Intents.all())
 
-)
+with open("config.txt","r") as fileRead:
+    token=(fileRead.read())
+
 
 @client.event
 async def on_ready():
@@ -946,6 +948,6 @@ async def on_message(message):
                 await message.channel.send(p11list)
         
         
+
         
-        
-client.run('Nzc4MzA2OTk2OTQzMTkyMDg1.X7QE4A.uWN9llAZyltXvh7L1bgGoYA_HSs')
+client.run(token)
