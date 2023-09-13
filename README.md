@@ -15,6 +15,14 @@ Run banker.py
 ```roll p<x>``` where \<x\> is the players number. The bot will automatically keep track of position.<br>
 Example: ```roll p1```
 
+* To pick a community chest:<br>
+```com``` The bot will give a randomised community chest card.<br>
+Example: ```com```
+
+* To pick a chance card:<br>
+```cnc``` The bot will give a randomised chance card.<<br>
+Example: ```cnc```
+
 * To increase a players account balance:<br>
   ```inc p<x> <val>``` where \<x\> is the players number and \<val\> is the amount to be increased.<br>
   Example: ```inc p1 1200```
@@ -38,6 +46,10 @@ Example: ```roll p1```
   * To check propertys of player:<br>
   ```prop p<x> curr``` where \<x\> is the players number.<br>
   Example: ```prop p1 curr```
+
+  * To roll a test dice:<br>
+  ```dice``` Rolls two six-sided dice.<br>
+  Example: ```dice```
 
 ## Even more important
 Be viby
