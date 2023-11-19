@@ -40,7 +40,7 @@ Example: ```cnc```
   Example: ```prop p1 gain 13```
   
  * To remove a property to player:<br>
-  ```prop p<x> gain <num>``` where \<x\> is the players number and /<num/> is the property's index number. (check index.txt)<br>
+  ```prop p<x> lose <num>``` where \<x\> is the players number and /<num/> is the property's index number. (check index.txt)<br>
   Example: ```prop p1 lose 13```
   
   * To check propertys of player:<br>
