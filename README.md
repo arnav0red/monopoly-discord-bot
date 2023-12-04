@@ -1,7 +1,7 @@
 # monopoly-discord-bot
 A monopoly bot to help players play the game online on a discord chat
 
-<img width="905" alt="Screenshot 2023-03-25 162439" src="https://user-images.githubusercontent.com/124733483/227742888-d27897ec-2a18-4ee6-a32b-dfdfc76c291c.png">
+<img width="905" alt="sample_output" src="extra/sample_output.png">
 
 
 ## Setup
