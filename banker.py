@@ -862,14 +862,13 @@ async def on_message(message):
         
     #await message.channel.send(file=discord.File('Whitehall.png'))
     if message.content.startswith('prop'):
-        value=message.content[6]
-        ap=message.content[(10):len(message.content)]
-        
-        if message.content[8]=="g":
+        value="p"+message.content[6]
+        ap=message.content[(13):len(message.content)]
+        if message.content[8:12]=="gain":
             ap=int(ap)
             pp=index(ap)
             pop="Player "+value+" gets "+pp
-            await message.channel.send(pop)
+            
             if value=="p1":
                 p1list.append(pp)
             elif value=="p2":
@@ -892,8 +891,8 @@ async def on_message(message):
                 p10list.append(pp)
             elif value=="p11":
                 p11list.append(pp)
-
-        if message.content[8]=="l":
+            await message.channel.send(pop)
+        if message.content[8:12]=="loss":
             ap=int(ap)
             pp=index(ap)
             pop="Player "+value+" loses "+pp
@@ -922,8 +921,9 @@ async def on_message(message):
             elif value=="p11":
                 p11list.remove=(pp)
 
-        if message.content[8]=="b":
+        if message.content[8:12]=="curr":
             pop="Player "+value+" has"
+            
             if value=="p1":
                 await message.channel.send(p1list)
             elif value=="p2":
