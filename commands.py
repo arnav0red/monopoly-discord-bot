@@ -7,8 +7,9 @@ def com():
     To keep track of actions:
     -1: None
     0: Change currency
-    1: Gain Property
+    1: Gain Property changeValue
     2: Collect changeValue from each player
+    3: Go to Jail
     """
     action = -1
     # toTrackChangeInCurrency
@@ -33,8 +34,10 @@ def com():
     elif cd == 5:
         com = "Get Out of Jail Free. This card may be kept until needed or sold/traded."
         action = 1
+        changeValue=40
     elif cd == 6:
         com = "Go to Jail. Go directly to jail. Do not pass Go, Do not collect $200"
+        action=3
     elif cd == 7:
         com = (
             "Grand Opera Night. Collect $50 from every player for opening night seats."
@@ -153,6 +156,7 @@ def index(n):
     -1: None
     0: Community Chest
     1: Chance
+    3: Go to Jail
     """
     toDoCode = -1
     if n == 0:
@@ -221,6 +225,7 @@ def index(n):
         m = ":yellow_square: Picadilly- 29"
     elif n == 30:
         m = "Go to Jail"
+        toDoCode=3
     elif n == 31:
         m = ":green_square: Regent Street- 31"
     elif n == 32:
