@@ -27,28 +27,7 @@ async def on_message(message):
         
     if message.content==('print'):
         print(message.author.id)
-#---------------------------------NEWER EXP CODE--------------------------------
-
-    if message.content==("game start"):
-        king=message.author.id
-        
-        await message.channel.send("Please enter total number of players")
-        msg = await client.wait_for('message', check=check)
-        if message.author.id==king:
-            
-            totalplayers=int(msg)
-            print(totalplayers)
-        
-        
-
-
-
-
-
-
-
-     
-#----------------------------------OLDER CODE---------------------------------
+ 
     if message.content==('com'):
         await message.channel.send(com())
     if message.content==('cnc'):
