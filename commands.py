@@ -34,10 +34,10 @@ def com():
     elif cd == 5:
         com = "Get Out of Jail Free. This card may be kept until needed or sold/traded."
         action = 1
-        changeValue=40
+        changeValue = 40
     elif cd == 6:
         com = "Go to Jail. Go directly to jail. Do not pass Go, Do not collect $200"
-        action=3
+        action = 3
     elif cd == 7:
         com = (
             "Grand Opera Night. Collect $50 from every player for opening night seats."
@@ -141,7 +141,7 @@ def cnc():
         com = "You have won a crossword competition. Collect $100"
         action = 0
         changeValue = 100
-    return com,action,changeValue
+    return com, action, changeValue
 
 
 def dice():
@@ -156,100 +156,153 @@ def index(n):
     -1: None
     0: Community Chest
     1: Chance
+    2: Property
     3: Go to Jail
     """
     toDoCode = -1
+    file=None
     if n == 0:
         m = "GO"
     elif n == 1:
         m = ":brown_square: Old Kent Road- 1"
+        toDoCode = 2
+        file=("./resources/Old Kent Road.png")
+
     elif n == 2:
         m = "Community Chest"
         toDoCode = 0
     elif n == 3:
         m = ":brown_square: Whitechapel Road- 3"
+        toDoCode = 2
+        file=("./resources/Whitechapel Road.png")
     elif n == 4:
         m = "Income Tax"
     elif n == 5:
         m = "Kings Cross Station- 5"
+        file=("./resources/Kings Cross Station.png")
     elif n == 6:
         m = ":blue_square: The Angel Islington- 6"
+        toDoCode = 2
+        file=("./resources/The Angel Islington.png")
     elif n == 7:
         m = "Chance"
         toDoCode = 1
     elif n == 8:
         m = ":blue_square: Euston Road- 8"
+        toDoCode = 2
+        file=("./resources/Euston Road.png")
     elif n == 9:
         m = ":blue_square: Pentonville Road- 9"
+        toDoCode = 2
+        file=("./resources/Pentonville Road.png")
     elif n == 10:
         m = "Just Visiting Jail"
     elif n == 11:
         m = ":purple_square: Pall Mall- 11"
+        toDoCode = 2
+        file=("./resources/Pall Mall.png")
     elif n == 12:
         m = "Electric Company- 12"
+        file=("./resources/electric company.jpg")
     elif n == 13:
         m = ":purple_square: Whitehall- 13"
+        toDoCode = 2
+        file=("./resources/Whitehall.png")
     elif n == 14:
         m = ":purple_square: Northumrl'd Avenue- 14"
+        toDoCode = 2
+        file=("./resources/Northumberland Avenue.png")
     elif n == 15:
         m = "Marylbone Station- 15"
+        file=("./resources/Marylebone Station.png")
     elif n == 16:
         m = ":orange_square: Bow Street- 16"
+        toDoCode = 2
+        file=("./resources/Bow Street.png")
     elif n == 17:
         m = "Community Chest"
         toDoCode = 0
     elif n == 18:
         m = ":orange_square: Marlborough Street- 18"
+        toDoCode = 2
+        file=("./resources/Marylebone Street.png")
     elif n == 19:
         m = ":orange_square: Vine Street- 19"
+        toDoCode = 2
+        file=("./resources/Vine Street.png")
     elif n == 20:
         m = "Free Parking"
     elif n == 21:
         m = ":red_square: Strand- 21"
+        toDoCode = 2
+        file=("./resources/Strand.png")
     elif n == 22:
         m = "Chance"
         toDoCode = 1
     elif n == 23:
         m = ":red_square: Fleet Street- 23"
+        toDoCode = 2
+        file=("./resources/Fleet Street.png")
     elif n == 24:
         m = ":red_square: Trafalgar Square- 24"
+        toDoCode = 2
+        file=("./resources/Trafalgar Square.png")
     elif n == 25:
         m = "Fenchurch St Station- 25"
+        file=("./resources/Fenchurch Street Station.png")
     elif n == 26:
         m = ":yellow_square: Leicester Square- 26"
+        toDoCode = 2
+        file=("./resources/Leicester Square.png")
     elif n == 27:
         m = ":yellow_square: Coventry Street- 27"
+        toDoCode = 2
+        file=("./resources/Coventry Street.png")
     elif n == 28:
         m = "Water Works- 28"
+        file=("./resources/water works.jpg")
     elif n == 29:
         m = ":yellow_square: Picadilly- 29"
+        toDoCode = 2
+        file=("./resources/Piccadilly.png")
     elif n == 30:
         m = "Go to Jail"
-        toDoCode=3
+        toDoCode = 3
     elif n == 31:
         m = ":green_square: Regent Street- 31"
+        toDoCode = 2
+        file=("./resources/Regent Street.png")
     elif n == 32:
         m = ":green_square: Oxford Street- 32"
+        toDoCode = 2
+        file=("./resources/Oxford Street.png")
     elif n == 33:
         m = "Community Chest"
         toDoCode = 0
     elif n == 34:
         m = ":green_square: Bond Street- 34"
+        toDoCode = 2
+        file=("./resources/Bond Street.png")
     elif n == 35:
         m = "Liverpool Street Station- 35"
+        file=("./resources/Liverpool Street Station.png")
     elif n == 36:
         m = "Chance"
         toDoCode = 1
     elif n == 37:
         m = ":black_large_square: Park Lane- 36"
+        toDoCode = 2
+        file=("./resources/Park Lane.png")
     elif n == 38:
         m = "Super Tax"
     elif n == 39:
         m = ":black_large_square: Mayfair- 39"
+        toDoCode = 2
+        file=("./resources/Mayfair.png")
     elif n == 40:
         m = ":flag_white: Get out of Jail Free- 40"
 
-    return m, toDoCode
+    return m, toDoCode, file
 
 
 def increase(pc, val):
