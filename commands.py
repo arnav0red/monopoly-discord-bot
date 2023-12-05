@@ -92,6 +92,7 @@ def cnc():
     0: Change currency
     1: Gain Property
     2: Collect changeValue from each player
+    3: Go to Jail
     """
     action = -1
     # toTrackChangeInCurrency
@@ -108,9 +109,9 @@ def cnc():
     elif cd == 4:
         com = "Advance token to nearest Utility. If unowned, you may buy it from the Bank. If owned, throw dice and pay owner a total 10 (ten) times the amount thrown"
     elif cd == 5:
-        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she {he} is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
+        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
     elif cd == 6:
-        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she {he} is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
+        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
     elif cd == 7:
         com = "Bank pays you dividend of $50."
         action = 0
@@ -121,8 +122,9 @@ def cnc():
         com = "Go Back Three {3} Spaces"
     elif cd == 10:
         com = "Go to Jail. Go directly to Jail. Do not pass GO, do not collect $200."
+        action=3
     elif cd == 11:
-        com = "Make general repairs on all your property: For each house pay $25, For each hotel {pay} $100"
+        com = "Make general repairs on all your property: For each house pay $25, For each hotel pay $100"
     elif cd == 12:
         com = "Pay poor tax of $15"
         action = 0
@@ -225,7 +227,7 @@ def index(n):
     elif n == 18:
         m = ":orange_square: Marlborough Street- 18"
         toDoCode = 2
-        file=("./resources/Marylebone Street.png")
+        file=("./resources/Marlborough Street.png")
     elif n == 19:
         m = ":orange_square: Vine Street- 19"
         toDoCode = 2
@@ -290,7 +292,7 @@ def index(n):
         m = "Chance"
         toDoCode = 1
     elif n == 37:
-        m = ":black_large_square: Park Lane- 36"
+        m = ":black_large_square: Park Lane- 37"
         toDoCode = 2
         file=("./resources/Park Lane.png")
     elif n == 38:
