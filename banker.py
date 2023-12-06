@@ -1,5 +1,5 @@
 from commands import *
-import discord, random, string, asyncio, pickle, os, csv
+import discord, random, string, asyncio, pickle, os, csv, time
 
 
 class propertyClass:
@@ -47,6 +47,7 @@ gameMode = {
     "jailMessage": None,
     "propertySellorAuction": None,
     "auctionMessage": None,
+    "timer": None,
 }
 
 # TODO: changing gameMessage for testing
@@ -83,7 +84,7 @@ async def on_ready():
 
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     global globalMessage
     messageValue = str(message.content.lower())
     # -------------------
@@ -107,17 +108,10 @@ async def on_message(message):
     if len(gameMessage) != 1:
         return
     elif message.content == ("print"):
-        await message.channel.send(len(playerList))
+        asyncio.create_task(auctionTimer(message.channel, 5))
     elif message.content == ("test"):
         playerList[1].addProperty(getProperty(1))
-        playerList[1].addProperty(getProperty(3))
-        playerList[1].addProperty(getProperty(6))
-        playerList[1].addProperty(getProperty(8))
-        playerList[1].addProperty(getProperty(9))
-        playerList[1].addProperty(getProperty(11))
-        playerList[1].addProperty(getProperty(12))
-        playerList[1].addProperty(getProperty(13))
-        playerList[1].addProperty(getProperty(14))
+
     elif message.content.startswith("bid"):
         currPlayer = getUser(message.author)
         if currPlayer == None:
@@ -126,15 +120,16 @@ async def on_message(message):
             )
             return
         if (
-            message.content.split("bid ")[1].strip().isdigit()
-            and gameMode["auctionMessage"] != None
+            gameMode["auctionMessage"] != None
+            and message.content.split("bid ")[1].strip().isdigit()
         ):
             currentBid = int(message.content.split("bid ")[1].strip())
             oldBid = gameMode["auctionMessage"][0]
             prop = gameMode["auctionMessage"][1]
             if currentBid <= oldBid or currentBid < 1:
-                toReturn = "Please bid more than " + str(oldBid)
-
+                await message.channel.send("Please bid more than " + str(oldBid))
+            elif currentBid>currPlayer.value:
+                await message.channel.send("Please do not bid more than what you have")
             else:
                 toReturn = (
                     str(currPlayer.user)
@@ -143,8 +138,13 @@ async def on_message(message):
                     + " for "
                     + str(prop.PropertyInternational)
                 )
-                gameMode["auctionMessage"] = [currentBid, prop]
-            await message.channel.send(toReturn)
+                gameMode["auctionMessage"] = [currentBid, prop, currPlayer.user]
+                await message.channel.send(toReturn)
+                if gameMode["timer"] != None and not gameMode["timer"].done():
+                    gameMode["timer"].cancel()
+                gameMode["timer"]: asyncio.Task = asyncio.create_task(
+                    auctionTimer(message.channel, 5)
+                )
 
     elif message.content == ("sudo com"):
         await message.channel.send(com()[0])
@@ -220,6 +220,27 @@ async def on_message(message):
             await gameMode["jailMessage"].add_reaction("1️⃣")
             await gameMode["jailMessage"].add_reaction("2️⃣")
             await gameMode["jailMessage"].add_reaction("3️⃣")
+
+
+async def auctionTimer(channel: discord.TextChannel, countdown: int):
+    if(gameMode["auctionMessage"]==None):
+        await channel.send("Auction has been concluded")
+        return
+    timer = await channel.send("CountDown:" + str(countdown))
+    while countdown > 0:
+        countdown -= 1
+        await asyncio.sleep(1)
+        await timer.edit(content=("CountDown:" + str(countdown)))
+    currBid:int=gameMode["auctionMessage"][0]
+    prop: propertyClass = gameMode["auctionMessage"][1]
+    currPLayer: playerClass = getUser(gameMode["auctionMessage"][2])
+    gameMode["auctionMessage"]=None
+    currPLayer.value-=currBid
+    prop.owner = currPLayer
+    currPLayer.addProperty(prop)
+    await channel.send(
+        str(currPLayer.user) + " has bought " + str(prop.PropertyInternational)+" for $"+str(currBid)
+    )
 
 
 async def mapMovement(currPlayer: playerClass, num: int, channel: discord.TextChannel):
