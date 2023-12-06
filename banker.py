@@ -108,7 +108,7 @@ async def on_message(message: discord.Message):
     if len(gameMessage) != 1:
         return
     elif message.content == ("print"):
-        asyncio.create_task(auctionTimer(message.channel, 5))
+        playerList[0].value-=1499
     elif message.content == ("test"):
         playerList[1].addProperty(getProperty(1))
 
@@ -375,15 +375,19 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         and user == gameMode["propertySellorAuction"][1].user
     ):
         if reaction.emoji == "1️⃣":
-            currPlayer.addProperty(gameMode["propertySellorAuction"][2])
-            currPlayer.value -= int(gameMode["propertySellorAuction"][2].Cost)
             channel = gameMode["propertySellorAuction"][0].channel
-            toReturn = (
-                str(currPlayer.user)
-                + " has bought "
-                + str(gameMode["propertySellorAuction"][2].PropertyInternational)
-            )
-            gameMode["propertySellorAuction"] = None
+            if(currPlayer.value>=int(gameMode["propertySellorAuction"][2].Cost)):
+                currPlayer.addProperty(gameMode["propertySellorAuction"][2])
+                currPlayer.value -= int(gameMode["propertySellorAuction"][2].Cost)
+                
+                toReturn = (
+                    str(currPlayer.user)
+                    + " has bought "
+                    + str(gameMode["propertySellorAuction"][2].PropertyInternational)
+                )
+                gameMode["propertySellorAuction"] = None
+            else:
+                toReturn="You do not have enough funds to purchase this property"
             await channel.send(toReturn)
         elif reaction.emoji == "2️⃣":
             channel: discord.TextChannel = gameMode["propertySellorAuction"][0].channel
