@@ -17,6 +17,12 @@ class propertyClass:
         self.Mortgage = listVals[11]
         self.UnmortgageCost = listVals[12]
         self.Index = listVals[13]
+        self.Emoji = listVals[14]
+
+    def __str__(self) -> str:
+        toReturn = self.Emoji + " "
+        toReturn += self.PropertyInternational
+        return toReturn
 
     def getRent(self) -> int:
         return int(self.Site)
@@ -27,15 +33,46 @@ class propertyClass:
 class playerClass:
     def __init__(self, user):
         self.user = user
+        self.value = 1500
+        self.properties: list[propertyClass] = []
+        self.map = 0
+
+    def __str__(self) -> str:
+        return str(self.user)
 
     def addProperty(self, property: propertyClass) -> None:
         property.owner = self
-        self.properties.append(property)
+        self.properties.append(None)
+        i = len(self.properties) - 2
+        while i >= 0:
+            if self.properties[i].ColorSet > property.ColorSet:
+                self.properties[i + 1] = self.properties[i]
+            else:
+                break
+            i -= 1
+        self.properties[i + 1] = property
 
-    playerNum = -1
-    value = 1500
-    properties = []
-    map = 0
+    def hasProperty(self, property: propertyClass) -> bool:
+        for i in self.properties:
+            if i == property:
+                return True
+        return False
+
+    def removeProperty(self, property: propertyClass) -> propertyClass:
+        toReturn: propertyClass = None
+        i = 0
+        while i < len(self.properties):
+            if self.properties[i] == property:
+                toReturn = property
+                break
+            i += 1
+        size = len(self.properties)
+        self.properties = self.properties[0:i] + self.properties[i + 1 : size]
+        return toReturn
+
+    def useGetOutOfJailCard(self) -> bool:
+        if getProperty(40):
+            pass
 
 
 class gameModeClass:
@@ -112,13 +149,21 @@ async def on_message(message: discord.Message):
     if gameMode.gameMessage == None:
         return
     elif message.content == ("print"):
-        playerList[0].value = 1
+        playerList[0].addProperty(getProperty(40))
+        await message.channel.send("ADDED")
+    elif message.content == ("qwe"):
+        await message.channel.send(playerList[0].hasProperty(getProperty(40)))
+
     elif message.content.startswith("move"):
         await mapMovement(
             playerList[0],
             ["test", "test", int(message.content.split("move ")[1])],
             message.channel,
         )
+    elif message.content.startswith("test"):
+        message.content = message.content.split("test ")[1]
+        message.author = playerList[1].user
+        asyncio.create_task(on_message(message))
 
     elif message.content.startswith("bid"):
         currPlayer = getUser(message.author)
@@ -144,7 +189,7 @@ async def on_message(message: discord.Message):
                     + " has bid $"
                     + str(currentBid)
                     + " for "
-                    + str(prop.PropertyInternational)
+                    + str(prop)
                 )
                 gameMode.auctionMessage = [currentBid, prop, currPlayer.user]
                 await message.channel.send(toReturn)
@@ -169,24 +214,7 @@ async def on_message(message: discord.Message):
         )
         toReturn += "\nProperties: "
         for i in currPlayer.properties:
-            if i.ColorSet == "0":
-                toReturn += ":brown_square:"
-            elif i.ColorSet == "1":
-                toReturn += ":blue_square:"
-            elif i.ColorSet == "2":
-                toReturn += ":purple_square:"
-            elif i.ColorSet == "3":
-                toReturn += ":orange_square:"
-            elif i.ColorSet == "4":
-                toReturn += ":red_square:"
-            elif i.ColorSet == "5":
-                toReturn += ":yellow_square:"
-            elif i.ColorSet == "6":
-                toReturn += ":green_square:"
-            elif i.ColorSet == "7":
-                toReturn += ":black_large_square:"
-
-            toReturn += " " + str(i.PropertyInternational) + ", "
+            toReturn += " " + str(i) + ", "
         await message.channel.send(toReturn)
     elif message.content == ("dice"):
         num = dice()
@@ -202,27 +230,29 @@ async def on_message(message: discord.Message):
         )
         await message.channel.send(toReturn)
     elif message.content == ("roll"):
-        currPlayer = getUser(message.author)
-        if currPlayer == None:
-            await message.channel.send(
-                "Huh! Weird that you're not in the game. Please react to the game start message to be added."
-            )
-            return
-        if currPlayer.value < 0:
-            await message.channel.send(
-                "It appears you are in debt. Either get some funds or declare bankruptcy."
-            )
-        elif currPlayer.map >= 0:
-            num = dice()
-            asyncio.create_task(mapMovement(currPlayer, num, message.channel))
+        asyncio.create_task(rollDice(message.channel, getUser(message.author)))
 
-        else:
-            gameMode.jailMessage = await message.channel.send(
-                "Choose how you wish to get out of jail: \n1. By rolling a double \n2. Using a “Get out of jail free” card \n3.paying a $50 fine."
-            )
-            await gameMode.jailMessage.add_reaction("1️⃣")
-            await gameMode.jailMessage.add_reaction("2️⃣")
-            await gameMode.jailMessage.add_reaction("3️⃣")
+
+async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> None:
+    if currPlayer == None:
+        await channel.send(
+            "Huh! Weird that you're not in the game. Please react to the game start message to be added."
+        )
+        return
+    if currPlayer.value < 0:
+        await channel.send(
+            "It appears you are in debt. Either get some funds or declare bankruptcy."
+        )
+    elif currPlayer.map >= 0:
+        num = dice()
+        asyncio.create_task(mapMovement(currPlayer, num, channel))
+    else:
+        gameMode.jailMessage = await channel.send(
+            "Choose how you wish to get out of jail: \n1. By rolling a double \n2. Using a “Get out of jail free” card \n3.paying a $50 fine."
+        )
+        await gameMode.jailMessage.add_reaction("1️⃣")
+        await gameMode.jailMessage.add_reaction("2️⃣")
+        await gameMode.jailMessage.add_reaction("3️⃣")
 
 
 async def auctionTimer(channel: discord.TextChannel, countdown: int):
@@ -242,11 +272,7 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
     prop.owner = currPLayer
     currPLayer.addProperty(prop)
     await channel.send(
-        str(currPLayer.user)
-        + " has bought "
-        + str(prop.PropertyInternational)
-        + " for $"
-        + str(currBid)
+        str(currPLayer.user) + " has bought " + str(prop) + " for $" + str(currBid)
     )
 
 
@@ -296,7 +322,7 @@ async def mapMovement(
         else:
             toReturn = (
                 "\nProperty: "
-                + str(prop.PropertyInternational)
+                + str(prop)
                 + "is owned by "
                 + str(prop.owner.user)
                 + "\n"
@@ -324,10 +350,9 @@ async def mapMovement(
                 currPlayer.value += comAct[2]
 
             elif comAct[1] == 1:
-                currPlayer.properties.append(comAct[2])
-                toReturn += (
-                    "\n" + str(currPlayer.user) + " now has " + str(index(comAct[2])[0])
-                )
+                prop: propertyClass = getProperty(comAct[2])
+                currPlayer.addProperty(prop)
+                toReturn += "\n" + str(currPlayer.user) + " now has " + str(prop)
             elif comAct[1] == 2:
                 for i in playerList:
                     if i.user == currPlayer:
@@ -400,7 +425,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 toReturn = (
                     str(currPlayer.user)
                     + " has bought "
-                    + str(gameMode.propertySellorAuction[2].PropertyInternational)
+                    + str(gameMode.propertySellorAuction[2])
                 )
                 gameMode.propertySellorAuction = None
             else:
@@ -414,7 +439,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
             gameMode.auctionMessage = [0, prop]
             await channel.send(
                 "Starting auction for "
-                + prop.PropertyInternational
+                + str(prop)
                 + ". Please place your bids by typing 'bid NUMBER'"
             )
 
@@ -423,11 +448,14 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         and currPlayer.map < 0
         and reaction.message == gameMode.jailMessage
     ):
-        gameMode.jailMessage = None
+        
+        num = dice()
         if reaction.emoji == "1️⃣":
-            num = dice()
+            gameMode.jailMessage = None
             if num[0] == num[1]:
-                await reaction.message.channel.send("GOT OUT OF JAIL")
+                toReturn = str(currPlayer) + " has rolled a double"
+                toReturn += "\nGOT OUT OF JAIL"
+                await reaction.message.channel.send(toReturn)
                 currPlayer.map = 10
                 asyncio.create_task(
                     mapMovement(currPlayer, num, reaction.message.channel)
@@ -445,17 +473,29 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 )
                 await reaction.message.channel.send(toReturn)
         elif reaction.emoji == "2️⃣":
-            pass
+            card: propertyClass = getProperty(40)
+            if currPlayer.hasProperty(card):
+                currPlayer.removeProperty(card)
+                toReturn = str(currPlayer) + " has used their " + str(card)
+                toReturn += "\nGOT OUT OF JAIL"
+                gameMode.jailMessage = None
+                await reaction.message.channel.send(toReturn)
+                currPlayer.map = 10
+                asyncio.create_task(
+                    mapMovement(currPlayer, num, reaction.message.channel)
+                )
+            else:
+                await reaction.message.channel.send("You do not have a " + str(card))
         elif reaction.emoji == "3️⃣":
+            gameMode.jailMessage = None
             currPlayer.value -= 50
-            await reaction.message.channel.send(
-                str(currPlayer.user)
-                + " has payed the $50 fine. They are now out of jail"
-            )
+            toReturn = str(currPlayer.user) + " has payed the $50 fine."
+            toReturn += "\nGOT OUT OF JAIL"
+            await reaction.message.channel.send(toReturn)
+
             currPlayer.map = 10
-            asyncio.create_task(
-                mapMovement(currPlayer, dice(), reaction.message.channel)
-            )
+            asyncio.create_task(mapMovement(currPlayer, num, reaction.message.channel))
+
 
 def com():
     """
@@ -577,7 +617,7 @@ def cnc():
         com = "Go Back Three {3} Spaces"
     elif cd == 10:
         com = "Go to Jail. Go directly to Jail. Do not pass GO, do not collect $200."
-        action=3
+        action = 3
     elif cd == 11:
         com = "Make general repairs on all your property: For each house pay $25, For each hotel pay $100"
     elif cd == 12:
@@ -618,13 +658,13 @@ def index(n):
     4: Tax
     """
     toDoCode = -1
-    file=None
+    file = None
     if n == 0:
         m = "GO"
     elif n == 1:
         m = ":brown_square: Old Kent Road- 1"
         toDoCode = 2
-        file=("./resources/Old Kent Road.png")
+        file = "./resources/Old Kent Road.png"
 
     elif n == 2:
         m = "Community Chest"
@@ -632,137 +672,138 @@ def index(n):
     elif n == 3:
         m = ":brown_square: Whitechapel Road- 3"
         toDoCode = 2
-        file=("./resources/Whitechapel Road.png")
+        file = "./resources/Whitechapel Road.png"
     elif n == 4:
         m = "Income Tax"
-        toDoCode=4
+        toDoCode = 4
     elif n == 5:
         m = "Kings Cross Station- 5"
-        file=("./resources/Kings Cross Station.png")
+        file = "./resources/Kings Cross Station.png"
     elif n == 6:
         m = ":blue_square: The Angel Islington- 6"
         toDoCode = 2
-        file=("./resources/The Angel Islington.png")
+        file = "./resources/The Angel Islington.png"
     elif n == 7:
         m = "Chance"
         toDoCode = 1
     elif n == 8:
         m = ":blue_square: Euston Road- 8"
         toDoCode = 2
-        file=("./resources/Euston Road.png")
+        file = "./resources/Euston Road.png"
     elif n == 9:
         m = ":blue_square: Pentonville Road- 9"
         toDoCode = 2
-        file=("./resources/Pentonville Road.png")
+        file = "./resources/Pentonville Road.png"
     elif n == 10:
         m = "Just Visiting Jail"
     elif n == 11:
         m = ":purple_square: Pall Mall- 11"
         toDoCode = 2
-        file=("./resources/Pall Mall.png")
+        file = "./resources/Pall Mall.png"
     elif n == 12:
         m = "Electric Company- 12"
-        file=("./resources/electric company.jpg")
+        file = "./resources/electric company.jpg"
     elif n == 13:
         m = ":purple_square: Whitehall- 13"
         toDoCode = 2
-        file=("./resources/Whitehall.png")
+        file = "./resources/Whitehall.png"
     elif n == 14:
         m = ":purple_square: Northumrl'd Avenue- 14"
         toDoCode = 2
-        file=("./resources/Northumberland Avenue.png")
+        file = "./resources/Northumberland Avenue.png"
     elif n == 15:
         m = "Marylbone Station- 15"
-        file=("./resources/Marylebone Station.png")
+        file = "./resources/Marylebone Station.png"
     elif n == 16:
         m = ":orange_square: Bow Street- 16"
         toDoCode = 2
-        file=("./resources/Bow Street.png")
+        file = "./resources/Bow Street.png"
     elif n == 17:
         m = "Community Chest"
         toDoCode = 0
     elif n == 18:
         m = ":orange_square: Marlborough Street- 18"
         toDoCode = 2
-        file=("./resources/Marlborough Street.png")
+        file = "./resources/Marlborough Street.png"
     elif n == 19:
         m = ":orange_square: Vine Street- 19"
         toDoCode = 2
-        file=("./resources/Vine Street.png")
+        file = "./resources/Vine Street.png"
     elif n == 20:
         m = "Free Parking"
     elif n == 21:
         m = ":red_square: Strand- 21"
         toDoCode = 2
-        file=("./resources/Strand.png")
+        file = "./resources/Strand.png"
     elif n == 22:
         m = "Chance"
         toDoCode = 1
     elif n == 23:
         m = ":red_square: Fleet Street- 23"
         toDoCode = 2
-        file=("./resources/Fleet Street.png")
+        file = "./resources/Fleet Street.png"
     elif n == 24:
         m = ":red_square: Trafalgar Square- 24"
         toDoCode = 2
-        file=("./resources/Trafalgar Square.png")
+        file = "./resources/Trafalgar Square.png"
     elif n == 25:
         m = "Fenchurch St Station- 25"
-        file=("./resources/Fenchurch Street Station.png")
+        file = "./resources/Fenchurch Street Station.png"
     elif n == 26:
         m = ":yellow_square: Leicester Square- 26"
         toDoCode = 2
-        file=("./resources/Leicester Square.png")
+        file = "./resources/Leicester Square.png"
     elif n == 27:
         m = ":yellow_square: Coventry Street- 27"
         toDoCode = 2
-        file=("./resources/Coventry Street.png")
+        file = "./resources/Coventry Street.png"
     elif n == 28:
         m = "Water Works- 28"
-        file=("./resources/water works.jpg")
+        file = "./resources/water works.jpg"
     elif n == 29:
         m = ":yellow_square: Picadilly- 29"
         toDoCode = 2
-        file=("./resources/Piccadilly.png")
+        file = "./resources/Piccadilly.png"
     elif n == 30:
         m = "Go to Jail"
         toDoCode = 3
     elif n == 31:
         m = ":green_square: Regent Street- 31"
         toDoCode = 2
-        file=("./resources/Regent Street.png")
+        file = "./resources/Regent Street.png"
     elif n == 32:
         m = ":green_square: Oxford Street- 32"
         toDoCode = 2
-        file=("./resources/Oxford Street.png")
+        file = "./resources/Oxford Street.png"
     elif n == 33:
         m = "Community Chest"
         toDoCode = 0
     elif n == 34:
         m = ":green_square: Bond Street- 34"
         toDoCode = 2
-        file=("./resources/Bond Street.png")
+        file = "./resources/Bond Street.png"
     elif n == 35:
         m = "Liverpool Street Station- 35"
-        file=("./resources/Liverpool Street Station.png")
+        file = "./resources/Liverpool Street Station.png"
     elif n == 36:
         m = "Chance"
         toDoCode = 1
     elif n == 37:
         m = ":black_large_square: Park Lane- 37"
         toDoCode = 2
-        file=("./resources/Park Lane.png")
+        file = "./resources/Park Lane.png"
     elif n == 38:
         m = "Super Tax"
-        toDoCode=4
+        toDoCode = 4
     elif n == 39:
         m = ":black_large_square: Mayfair- 39"
         toDoCode = 2
-        file=("./resources/Mayfair.png")
+        file = "./resources/Mayfair.png"
     elif n == 40:
         m = ":flag_white: Get out of Jail Free- 40"
 
     return m, toDoCode, file
+
 
 with open("./resources/info.csv", "r") as file:
     reader = csv.reader(file)
