@@ -39,19 +39,24 @@ class playerClass:
     map = 0
 
 
+class gameModeClass:
+    def __innit__(
+        self, gameMessage, jailMessage, propertySellorAuction, auctionMessage, timer
+    ):
+        self.gameMessage = gameMessage
+        self.jailMessage = jailMessage
+        self.propertySellorAuction = propertySellorAuction
+        self.auctionMessage = auctionMessage
+        self.timer = timer
+
+
 playerList: list[playerClass] = []
 propertyList = []
 
-gameMode = {
-    "gameMessage": None,
-    "jailMessage": None,
-    "propertySellorAuction": None,
-    "auctionMessage": None,
-    "timer": None,
-}
+gameMode = gameModeClass(None, None, None, None, None)
 
 # TODO: changing gameMessage for testing
-gameMessage = [1]
+gameMode.gameMessage = 1
 
 
 def getUser(user: discord.Member) -> playerClass:
@@ -108,7 +113,7 @@ async def on_message(message: discord.Message):
     if len(gameMessage) != 1:
         return
     elif message.content == ("print"):
-        playerList[0].value-=1499
+        playerList[0].map = -1
     elif message.content == ("test"):
         playerList[1].addProperty(getProperty(1))
 
@@ -128,7 +133,7 @@ async def on_message(message: discord.Message):
             prop = gameMode["auctionMessage"][1]
             if currentBid <= oldBid or currentBid < 1:
                 await message.channel.send("Please bid more than " + str(oldBid))
-            elif currentBid>currPlayer.value:
+            elif currentBid > currPlayer.value:
                 await message.channel.send("Please do not bid more than what you have")
             else:
                 toReturn = (
@@ -223,7 +228,7 @@ async def on_message(message: discord.Message):
 
 
 async def auctionTimer(channel: discord.TextChannel, countdown: int):
-    if(gameMode["auctionMessage"]==None):
+    if gameMode["auctionMessage"] == None:
         await channel.send("Auction has been concluded")
         return
     timer = await channel.send("CountDown:" + str(countdown))
@@ -231,15 +236,19 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
         countdown -= 1
         await asyncio.sleep(1)
         await timer.edit(content=("CountDown:" + str(countdown)))
-    currBid:int=gameMode["auctionMessage"][0]
+    currBid: int = gameMode["auctionMessage"][0]
     prop: propertyClass = gameMode["auctionMessage"][1]
     currPLayer: playerClass = getUser(gameMode["auctionMessage"][2])
-    gameMode["auctionMessage"]=None
-    currPLayer.value-=currBid
+    gameMode["auctionMessage"] = None
+    currPLayer.value -= currBid
     prop.owner = currPLayer
     currPLayer.addProperty(prop)
     await channel.send(
-        str(currPLayer.user) + " has bought " + str(prop.PropertyInternational)+" for $"+str(currBid)
+        str(currPLayer.user)
+        + " has bought "
+        + str(prop.PropertyInternational)
+        + " for $"
+        + str(currBid)
     )
 
 
@@ -376,10 +385,10 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
     ):
         if reaction.emoji == "1️⃣":
             channel = gameMode["propertySellorAuction"][0].channel
-            if(currPlayer.value>=int(gameMode["propertySellorAuction"][2].Cost)):
+            if currPlayer.value >= int(gameMode["propertySellorAuction"][2].Cost):
                 currPlayer.addProperty(gameMode["propertySellorAuction"][2])
                 currPlayer.value -= int(gameMode["propertySellorAuction"][2].Cost)
-                
+
                 toReturn = (
                     str(currPlayer.user)
                     + " has bought "
@@ -387,7 +396,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 )
                 gameMode["propertySellorAuction"] = None
             else:
-                toReturn="You do not have enough funds to purchase this property"
+                toReturn = "You do not have enough funds to purchase this property"
             await channel.send(toReturn)
         elif reaction.emoji == "2️⃣":
             channel: discord.TextChannel = gameMode["propertySellorAuction"][0].channel
