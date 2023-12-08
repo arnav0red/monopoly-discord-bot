@@ -242,7 +242,7 @@ async def on_message(message: discord.Message):
         )
         await message.channel.send(toReturn)
     elif message.content == ("roll"):
-        asyncio.create_task(rollDice(message.channel, getUser(message.author)))
+        await rollDice(message.channel, getUser(message.author))
 
 
 async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> None:
@@ -257,7 +257,7 @@ async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> Non
         )
     elif currPlayer.map >= 0:
         num = dice()
-        asyncio.create_task(mapMovement(currPlayer, num, channel))
+        await mapMovement(currPlayer, num, channel)
     else:
         gameMode.jailMessage = await channel.send(
             "Choose how you wish to get out of jail: \n1. By rolling a double \n2. Using a “Get out of jail free” card \n3.paying a $50 fine."
@@ -304,7 +304,6 @@ async def mapMovement(
         "./resources/" + prop.PropertyInternational + ".png",
     ]
 
-    print(action[2])
     toReturn += (
         str(currPlayer.user)
         + " has rolled "
@@ -402,6 +401,15 @@ async def mapMovement(
         await channel.send(toReturn)
 
 
+async def escapeJail(
+    currPlayer: playerClass, channel: discord.TextChannel, output: str, num: list[int]
+) -> None:
+    output += "\nGOT OUT OF JAIL"
+    await channel.send(output)
+    currPlayer.map = 10
+    await mapMovement(currPlayer, num, channel)
+
+
 @client.event
 async def on_reaction_remove(reaction, user):
     currPlayer = getUser(user)
@@ -468,16 +476,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
     ):
         num = dice()
         if reaction.emoji == "1️⃣":
-            gameMode.jailMessage = None
-            if num[0] == num[1]:
-                toReturn = str(currPlayer) + " has rolled a double"
-                toReturn += "\nGOT OUT OF JAIL"
-                await reaction.message.channel.send(toReturn)
-                currPlayer.map = 10
-                asyncio.create_task(
-                    mapMovement(currPlayer, num, reaction.message.channel)
-                )
-            else:
+            if num[0] != num[1]:
                 toReturn = (
                     str(currPlayer.user)
                     + " has rolled "
@@ -486,32 +485,35 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                     + str(num[1])
                     + "="
                     + str(num[2])
-                    + "\nNot a double, so still stuck in jail"
                 )
-                await reaction.message.channel.send(toReturn)
+                currPlayer.map -= 1
+                if currPlayer.map > -4:
+                    toReturn += "\nNot a double, so still stuck in jail"
+                    await reaction.message.channel.send(toReturn)
+                    return
+                else:
+                    toReturn = (
+                        "Since "
+                        + str(currPlayer)
+                        + " has been stuck in jail for three turns, they must now pay the $50 fine."
+                    )
+                    currPlayer.value -= 50
+            else:
+                toReturn = str(currPlayer) + " has rolled a double"
+
         elif reaction.emoji == "2️⃣":
             card: propertyClass = getProperty(40)
             if currPlayer.hasProperty(card):
                 currPlayer.removeProperty(card)
                 toReturn = str(currPlayer) + " has used their " + str(card)
-                toReturn += "\nGOT OUT OF JAIL"
-                gameMode.jailMessage = None
-                await reaction.message.channel.send(toReturn)
-                currPlayer.map = 10
-                asyncio.create_task(
-                    mapMovement(currPlayer, num, reaction.message.channel)
-                )
             else:
                 await reaction.message.channel.send("You do not have a " + str(card))
+                return
         elif reaction.emoji == "3️⃣":
-            gameMode.jailMessage = None
             currPlayer.value -= 50
             toReturn = str(currPlayer.user) + " has payed the $50 fine."
-            toReturn += "\nGOT OUT OF JAIL"
-            await reaction.message.channel.send(toReturn)
-
-            currPlayer.map = 10
-            asyncio.create_task(mapMovement(currPlayer, num, reaction.message.channel))
+        gameMode.jailMessage = None
+        await escapeJail(currPlayer, reaction.message.channel, toReturn, num)
 
 
 def com():
