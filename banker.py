@@ -173,7 +173,7 @@ def getGame(channel: discord.TextChannel) -> gameModeClass:
 
 
 # TODO: changing gameMessage for testing
-debug = False
+debug = True
 
 
 client = discord.Client(intents=discord.Intents.all())
@@ -209,19 +209,21 @@ async def on_message(message: discord.Message):
         
         await gameMode.gameMessage.add_reaction("🚩")
 
-    if debug or gameMode==None:
+    if  not debug and gameMode==None :
         return
     
     # -------------------
     # TODO: Temp added
     notInList = debug
-    for val in gameMode.playerList:
-        if val.user == message.author:
-            notInList = False
-            break
+    if(gameMode!=None):
+        for val in gameMode.playerList:
+            if val.user == message.author:
+                notInList = False
+                break
     if notInList:
         pass
-        gameMode.gameMessage = message
+        gameMode= gameModeClass(message, None, None, None, None, None)
+        hostedGames.append(gameMode)
         gameMode.playerList.append(playerClass(message.author))
     # ------------------
     
