@@ -1,7 +1,7 @@
 import discord, random, string, asyncio, pickle, os, csv, time
 
 
-class propertyClass:
+class mapItemClass:
     """Action:
     -1: None
     0: Community Chest
@@ -30,15 +30,32 @@ class propertyClass:
         self.Index = listVals[13]
         self.Emoji = listVals[14]
         self.Action = listVals[15]
-        self.Owner = None
 
     def __str__(self) -> str:
         toReturn = self.Emoji + " "
         toReturn += self.PropertyInternational
         return toReturn
 
+
+class propertyClass:
+    def __init__(self, index: int, owner):
+        self.index = index
+        self.owner = owner
+        self.houses = 0
+        self.hotel = 0
+
+    def __str__(self) -> str:
+        return (
+            getMapItem(self.index).Emoji
+            + " "
+            + getMapItem(self.index).PropertyInternational
+        )
+
+    def getColorSet(self) -> int:
+        return int(getMapItem(self.index).ColorSet)
+
     def getRent(self) -> int:
-        return int(self.Site)
+        return int(getMapItem(self.index).Site)
 
 
 class playerClass:
@@ -51,17 +68,17 @@ class playerClass:
     def __str__(self) -> str:
         return str(self.user)
 
-    def addProperty(self, property: propertyClass) -> None:
-        property.Owner = self
+    def addProperty(self, mapItem: mapItemClass) -> propertyClass:
         self.properties.append(None)
         i = len(self.properties) - 2
         while i >= 0:
-            if self.properties[i].ColorSet > property.ColorSet:
+            if self.properties[i].getColorSet() > int(mapItem.ColorSet):
                 self.properties[i + 1] = self.properties[i]
             else:
                 break
             i -= 1
-        self.properties[i + 1] = property
+        self.properties[i + 1] = propertyClass(int(mapItem.Index), self)
+        return self.properties[i + 1]
 
     def hasProperty(self, property: propertyClass) -> bool:
         for i in self.properties:
@@ -82,7 +99,7 @@ class playerClass:
         return toReturn
 
     def useGetOutOfJailCard(self) -> bool:
-        if getProperty(40):
+        if getMapItem(40):
             pass
 
 
@@ -96,48 +113,67 @@ class gameModeClass:
         timer,
         tradeMessage,
     ):
-        self.gameMessage: discord.TextChannel = gameMessage
+        self.gameMessage: discord.Message = gameMessage
         self.jailMessage: discord.TextChannel = jailMessage
         self.propertySellorAuction = propertySellorAuction
         self.auctionMessage = auctionMessage
         self.timer: discord.TextChannel = timer
         self.tradeMessage: discord.Message = tradeMessage
+        self.playerList: list[playerClass] = []
+        self.propertiesOwned: list[propertyClass] = []
+
+    def getUser(self, user: discord.Member) -> playerClass:
+        currPlayer = None
+        for val in self.playerList:
+            if val.user == user:
+                currPlayer = val
+                break
+        return currPlayer
+
+    def getUserFromString(self, user: str) -> playerClass:
+        currPlayer = None
+        for val in self.playerList:
+            if str(val.user) == user:
+                currPlayer = val
+                break
+        return currPlayer
+
+    def registerPropertyOwned(self, property: propertyClass) -> None:
+        self.propertiesOwned.append(property)
+
+    def getProperty(self, mapItem: mapItemClass) -> propertyClass:
+        toReturn = None
+        for i in self.propertiesOwned:
+            if i.index == int(mapItem.Index):
+                toReturn = i
+                break
+        return toReturn
 
 
-playerList: list[playerClass] = []
-propertyList: list[propertyClass] = []
-
-gameMode = gameModeClass(None, None, None, None, None, None)
-
-# TODO: changing gameMessage for testing
-gameMode.gameMessage = 1
-
-
-def getUser(user: discord.Member) -> playerClass:
-    currPlayer = None
-    for val in playerList:
-        if val.user == user:
-            currPlayer = val
-            break
-    return currPlayer
-
-
-def getUserFromString(user: str) -> playerClass:
-    currPlayer = None
-    for val in playerList:
-        if str(val.user) == user:
-            currPlayer = val
-            break
-    return currPlayer
-
-
-def getProperty(num: int) -> propertyClass:
+def getMapItem(num: int) -> mapItemClass:
     prop = None
-    for i in propertyList:
+    for i in mapItemList:
         if int(i.Index) == num:
             prop = i
             break
     return prop
+
+
+mapItemList: list[mapItemClass] = []
+hostedGames: list[gameModeClass] = []
+
+
+def getGame(channel: discord.TextChannel) -> gameModeClass:
+    toReturn = None
+    for i in hostedGames:
+        if i.gameMessage.channel == channel:
+            toReturn = i
+            break
+    return toReturn
+
+
+# TODO: changing gameMessage for testing
+debug = False
 
 
 client = discord.Client(intents=discord.Intents.all())
@@ -153,50 +189,59 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
-    global globalMessage
     messageValue = str(message.content.lower())
+    gameMode=getGame(message.channel)
+    if messageValue.startswith("game start"):
+        if gameMode != None:
+            await gameMode.gameMessage.channel.send(
+                "There is already an existing game in this channel.\nPlease write ```game close``` to end it."
+            )
+            return
+        
+        for i in message.channel.threads:
+            if i.name == "TRADE" and i.owner == client.user:
+                await i.delete()
+        gameMessage = await message.channel.send(
+            "Starting game.\nTo participate react with 🚩 to the game start message"
+        )
+        gameMode=gameMode = gameModeClass(gameMessage, None, None, None, None, None)
+        hostedGames.append(gameMode)
+        
+        await gameMode.gameMessage.add_reaction("🚩")
+
+    if debug or gameMode==None:
+        return
+    
     # -------------------
     # TODO: Temp added
-    notInList = True
-    for val in playerList:
+    notInList = debug
+    for val in gameMode.playerList:
         if val.user == message.author:
             notInList = False
             break
     if notInList:
         pass
-        playerList.append(playerClass(message.author))
+        gameMode.gameMessage = message
+        gameMode.playerList.append(playerClass(message.author))
     # ------------------
-    if messageValue.startswith("game start"):
-        gameMode.gameMessage = None
-        for i in message.channel.threads:
-            if i.name == "TRADE" and i.owner == client.user:
-                await i.delete()
-        gameMode.gameMessage = await message.channel.send(
-            "Starting game.\nTo participate react with 🚩 to the game start message"
-        )
-        await gameMode.gameMessage.add_reaction("🚩")
-
-    if gameMode.gameMessage == None:
-        return
+    
     elif message.content == ("print"):
         pass
-    elif message.content == ("qwe"):
-        await message.channel.send(playerList[0].hasProperty(getProperty(40)))
 
     elif message.content.startswith("move"):
         await mapMovement(
-            playerList[0],
+            gameMode.getUser(message.author),
             ["test", "test", int(message.content.split("move ")[1])],
-            message.channel,
+            gameMode.gameMessage.channel,
         )
     elif message.content.startswith("test"):
         message.content = message.content.split("test ")[1]
-        message.author = playerList[1].user
+        message.author = gameMode.playerList[1].user
         asyncio.create_task(on_message(message))
     elif message.content.startswith("bid"):
-        currPlayer = getUser(message.author)
+        currPlayer = gameMode.getUser(message.author)
         if currPlayer == None:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
@@ -208,9 +253,13 @@ async def on_message(message: discord.Message):
             oldBid = gameMode.auctionMessage[0]
             prop = gameMode.auctionMessage[1]
             if currentBid <= oldBid or currentBid < 1:
-                await message.channel.send("Please bid more than " + str(oldBid))
+                await gameMode.gameMessage.channel.send(
+                    "Please bid more than " + str(oldBid)
+                )
             elif currentBid > currPlayer.value:
-                await message.channel.send("Please do not bid more than what you have")
+                await gameMode.gameMessage.channel.send(
+                    "Please do not bid more than what you have"
+                )
             else:
                 toReturn = (
                     str(currPlayer.user)
@@ -220,24 +269,24 @@ async def on_message(message: discord.Message):
                     + str(prop)
                 )
                 gameMode.auctionMessage = [currentBid, prop, currPlayer.user]
-                await message.channel.send(toReturn)
+                await gameMode.gameMessage.channel.send(toReturn)
                 if gameMode.timer != None and not gameMode.timer.done():
                     gameMode.timer.cancel()
                 gameMode.timer: asyncio.Task = asyncio.create_task(
-                    auctionTimer(message.channel, 5)
+                    auctionTimer(gameMode.gameMessage.channel, 5)
                 )
     elif message.content == ("sudo com"):
-        await message.channel.send(com()[0])
+        await gameMode.gameMessage.channel.send(com()[0])
     elif message.content == ("sudo cnc"):
-        await message.channel.send(cnc()[0])
+        await gameMode.gameMessage.channel.send(cnc()[0])
     elif message.content == ("list"):
-        currPlayer = getUser(message.author)
+        currPlayer = gameMode.getUser(message.author)
         if currPlayer == None:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
-        await listUser(message.channel, currPlayer)
+        await listUser(gameMode.gameMessage.channel, currPlayer)
     elif message.content == ("dice"):
         num = dice()
         toReturn = (
@@ -250,27 +299,27 @@ async def on_message(message: discord.Message):
             + "="
             + str(num[2])
         )
-        await message.channel.send(toReturn)
+        await gameMode.gameMessage.channel.send(toReturn)
     elif message.content == ("roll"):
-        await rollDice(message.channel, getUser(message.author))
+        await rollDice(gameMode.gameMessage.channel, gameMode.getUser(message.author))
     elif message.content.startswith("trade "):
-        currPlayer = getUser(message.author)
+        currPlayer = gameMode.getUser(message.author)
         if currPlayer == None:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
-        tradePlayer: playerClass = getUserFromString(
+        tradePlayer: playerClass = gameMode.getUserFromString(
             message.content.split("trade ")[1].strip()
         )
 
         if tradePlayer != None:
             if gameMode.tradeMessage != None:
                 gameMode.tradeMessage = None
-                await message.channel.send(
+                await gameMode.gameMessage.channel.send(
                     "Starting a new trade. Terminating the last one in session."
                 )
-            thread = await message.channel.create_thread(
+            thread = await gameMode.gameMessage.channel.create_thread(
                 name="TRADE", type=discord.ChannelType.public_thread
             )
             await thread.add_user(currPlayer.user)
@@ -285,27 +334,27 @@ async def on_message(message: discord.Message):
 
             await thread.send(toReturn)
         else:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Can't find the user you're trying to trade with. Are you sure you've entered the correct name?"
             )
     elif message.content.startswith("offer "):
-        currPlayer = getUser(message.author)
+        currPlayer = gameMode.getUser(message.author)
         if currPlayer == None:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
-        tradePlayer: playerClass = getUserFromString(
+        tradePlayer: playerClass = gameMode.getUserFromString(
             message.content.split("offer ")[1].strip()
         )
 
         if tradePlayer != None:
             if gameMode.tradeMessage != None:
                 gameMode.tradeMessage = None
-                await message.channel.send(
+                await gameMode.gameMessage.channel.send(
                     "Starting a new trade. Terminating the last one in session."
                 )
-            thread = await message.channel.create_thread(
+            thread = await gameMode.gameMessage.channel.create_thread(
                 name="TRADE", type=discord.ChannelType.public_thread
             )
             await thread.add_user(currPlayer.user)
@@ -320,10 +369,10 @@ async def on_message(message: discord.Message):
 
             await thread.send(toReturn)
         else:
-            await message.channel.send(
+            await gameMode.gameMessage.channel.send(
                 "Can't find the user you're trying to trade with. Are you sure you've entered the correct name?"
             )
-    
+
 
 async def tradeMethod(
     responseMessage: discord.Message,
@@ -337,11 +386,13 @@ async def listUser(channel: discord.TextChannel, currPlayer: playerClass) -> Non
     toReturn = str(currPlayer.user) + "'s Account\nBalance: $" + str(currPlayer.value)
     toReturn += "\nProperties: "
     for i in currPlayer.properties:
-        toReturn += " " + str(i) + "-No" + str(i.Index) + ", "
+        toReturn += " " + str(i) + "-No" + str(i.index) + ", "
     await channel.send(toReturn)
 
 
 async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> None:
+    gameMode=getGame(channel)
+
     if currPlayer == None:
         await channel.send(
             "Huh! Weird that you're not in the game. Please react to the game start message to be added."
@@ -364,6 +415,8 @@ async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> Non
 
 
 async def auctionTimer(channel: discord.TextChannel, countdown: int):
+    gameMode=getGame(channel)
+
     if gameMode.auctionMessage == None:
         await channel.send("Auction has been concluded")
         return
@@ -373,12 +426,12 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
         await asyncio.sleep(1)
         await timer.edit(content=("CountDown:" + str(countdown)))
     currBid: int = gameMode.auctionMessage[0]
-    prop: propertyClass = gameMode.auctionMessage[1]
-    currPLayer: playerClass = getUser(gameMode.auctionMessage[2])
+    prop: mapItemClass = gameMode.auctionMessage[1]
+    currPLayer: playerClass = gameMode.getUser(gameMode.auctionMessage[2])
     gameMode.auctionMessage = None
     currPLayer.value -= currBid
-    prop.Owner = currPLayer
-    currPLayer.addProperty(prop)
+    gameMode.registerPropertyOwned(currPLayer.addProperty(prop))
+
     await channel.send(
         str(currPLayer.user) + " has bought " + str(prop) + " for $" + str(currBid)
     )
@@ -387,13 +440,15 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
 async def mapMovement(
     currPlayer: playerClass, num: list[int], channel: discord.TextChannel
 ):
+    gameMode=getGame(channel)
+
     toReturn = ""
     currPlayer.map = currPlayer.map + num[2]
     if currPlayer.map >= 40:
         toReturn += str(currPlayer.user) + " has crossed GO. They collect $200.\n"
         currPlayer.value += 200
         currPlayer.map = currPlayer.map % 40
-    prop = getProperty(currPlayer.map)
+    prop = getMapItem(currPlayer.map)
     action = [
         str(prop),
         int(prop.Action),
@@ -416,8 +471,7 @@ async def mapMovement(
     if action[1] == 2:
         await channel.send(toReturn)
         await channel.send(file=discord.File(action[2]))
-        prop = getProperty(currPlayer.map)
-        if prop.Owner == None:
+        if gameMode.getProperty(prop) == None:
             toReturn = (
                 "\nCost: " + str(prop.Cost) + "\nWould you like to \n1.Buy\n2.Auction"
             )
@@ -429,25 +483,26 @@ async def mapMovement(
             ]
             await gameMode.propertySellorAuction[0].add_reaction("1️⃣")
             await gameMode.propertySellorAuction[0].add_reaction("2️⃣")
-        elif prop.Owner == currPlayer:
+        elif gameMode.getProperty(prop).owner == currPlayer:
             toReturn = "Welcome to your property"
             await channel.send(toReturn)
         else:
+            property = gameMode.getProperty(prop)
             toReturn = (
                 "\nProperty: "
-                + str(prop)
+                + str(property)
                 + "is owned by "
-                + str(prop.Owner.user)
+                + str(property.owner)
                 + "\n"
                 + str(currPlayer.user)
                 + " pays "
-                + str(prop.Owner.user)
+                + str(property.owner)
                 + " $"
-                + str(prop.getRent())
+                + str(property.getRent())
             )
-            if currPlayer.value >= prop.getRent():
-                currPlayer.value -= prop.getRent()
-                prop.Owner.value += prop.getRent()
+            if currPlayer.value >= property.getRent():
+                currPlayer.value -= property.getRent()
+                property.owner.value += property.getRent()
             else:
                 toReturn += (
                     str(currPlayer.user)
@@ -463,11 +518,12 @@ async def mapMovement(
                 currPlayer.value += comAct[2]
 
             elif comAct[1] == 1:
-                prop: propertyClass = getProperty(comAct[2])
-                currPlayer.addProperty(prop)
+                prop: mapItemClass = getMapItem(comAct[2])
+                gameMode.registerPropertyOwned(currPlayer.addProperty(prop))
+
                 toReturn += "\n" + str(currPlayer.user) + " now has " + str(prop)
             elif comAct[1] == 2:
-                for i in playerList:
+                for i in gameMode.playerList:
                     if i.user == currPlayer:
                         continue
                     i.value -= comAct[2]
@@ -490,9 +546,9 @@ async def mapMovement(
                 "\n"
                 + str(currPlayer.user)
                 + " pays $"
-                + getProperty(currPlayer.map).Cost
+                + getMapItem(currPlayer.map).Cost
             )
-            currPlayer.value -= int(getProperty(currPlayer.map).Cost)
+            currPlayer.value -= int(getMapItem(currPlayer.map).Cost)
 
         await channel.send(toReturn)
 
@@ -507,31 +563,35 @@ async def escapeJail(
 
 
 @client.event
-async def on_reaction_remove(reaction, user):
-    currPlayer = getUser(user)
+async def on_reaction_remove(reaction:discord.Reaction, user):
+    gameMode=getGame(reaction.message.channel)
+    currPlayer = gameMode.getUser(user)
     if (
         currPlayer != None
         and reaction.message == gameMode.gameMessage
         and user != client.user
         and reaction.emoji == "🚩"
     ):
-        playerList.remove(currPlayer)
+        gameMode.playerList.remove(currPlayer)
         await gameMode.gameMessage.channel.send("Removed player " + str(user))
 
 
 @client.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
-    global playerList
+    gameMode=getGame(reaction.message.channel)
     if (
         reaction.message == gameMode.gameMessage
         and user != client.user
         and reaction.emoji == "🚩"
     ):
-        playerList.append(playerClass(user))
+        gameMode.playerList.append(playerClass(user))
         await gameMode.gameMessage.channel.send("Added player " + str(user))
 
-    currPlayer = getUser(user)
-    if currPlayer not in playerList:
+    currPlayer = gameMode.getUser(user)
+    if (
+        currPlayer not in gameMode.playerList
+        or gameMode.gameMessage.channel != reaction.message.channel
+    ):
         return
     if (
         gameMode.propertySellorAuction != None
@@ -541,7 +601,9 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         if reaction.emoji == "1️⃣":
             channel = gameMode.propertySellorAuction[0].channel
             if currPlayer.value >= int(gameMode.propertySellorAuction[2].Cost):
-                currPlayer.addProperty(gameMode.propertySellorAuction[2])
+                gameMode.registerPropertyOwned(
+                    currPlayer.addProperty(gameMode.propertySellorAuction[2])
+                )
                 currPlayer.value -= int(gameMode.propertySellorAuction[2].Cost)
 
                 toReturn = (
@@ -555,7 +617,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
             await channel.send(toReturn)
         elif reaction.emoji == "2️⃣":
             channel: discord.TextChannel = gameMode.propertySellorAuction[0].channel
-            prop: propertyClass = gameMode.propertySellorAuction[2]
+            prop: mapItemClass = gameMode.propertySellorAuction[2]
 
             gameMode.propertySellorAuction = None
             gameMode.auctionMessage = [0, prop]
@@ -585,7 +647,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 currPlayer.map -= 1
                 if currPlayer.map > -4:
                     toReturn += "\nNot a double, so still stuck in jail"
-                    await reaction.message.channel.send(toReturn)
+                    await gameMode.gameMessage.channel.send(toReturn)
                     return
                 else:
                     toReturn = (
@@ -598,18 +660,20 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 toReturn = str(currPlayer) + " has rolled a double"
 
         elif reaction.emoji == "2️⃣":
-            card: propertyClass = getProperty(40)
+            card: mapItemClass = getMapItem(40)
             if currPlayer.hasProperty(card):
                 currPlayer.removeProperty(card)
                 toReturn = str(currPlayer) + " has used their " + str(card)
             else:
-                await reaction.message.channel.send("You do not have a " + str(card))
+                await gameMode.gameMessage.channel.send(
+                    "You do not have a " + str(card)
+                )
                 return
         elif reaction.emoji == "3️⃣":
             currPlayer.value -= 50
             toReturn = str(currPlayer.user) + " has payed the $50 fine."
         gameMode.jailMessage = None
-        await escapeJail(currPlayer, reaction.message.channel, toReturn, num)
+        await escapeJail(currPlayer, gameMode.gameMessage.channel, toReturn, num)
 
 
 def com():
@@ -767,6 +831,6 @@ with open("./resources/info.csv", "r") as file:
     reader = csv.reader(file)
     next(reader)
     for row in reader:
-        propertyList.append(propertyClass(row))
+        mapItemList.append(mapItemClass(row))
 
 client.run(token)
