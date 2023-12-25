@@ -69,16 +69,11 @@ class playerClass:
         return str(self.user)
 
     def addProperty(self, mapItem: mapItemClass) -> propertyClass:
-        self.properties.append(None)
-        i = len(self.properties) - 2
-        while i >= 0:
-            if self.properties[i].getColorSet() > int(mapItem.ColorSet):
-                self.properties[i + 1] = self.properties[i]
-            else:
-                break
-            i -= 1
-        self.properties[i + 1] = propertyClass(int(mapItem.Index), self)
-        return self.properties[i + 1]
+        toReturn:propertyClass=propertyClass(int(mapItem.Index), self)
+        self.properties.append(toReturn)
+        self.properties=sorted(self.properties, key=lambda x: x.getColorSet())
+
+        return toReturn
 
     def hasProperty(self, property: propertyClass) -> bool:
         for i in self.properties:
@@ -88,14 +83,11 @@ class playerClass:
 
     def removeProperty(self, property: propertyClass) -> propertyClass:
         toReturn: propertyClass = None
-        i = 0
-        while i < len(self.properties):
-            if self.properties[i] == property:
+        for i in self.properties:
+            if i == property:
                 toReturn = property
                 break
-            i += 1
-        size = len(self.properties)
-        self.properties = self.properties[0:i] + self.properties[i + 1 : size]
+        self.properties.remove(toReturn)
         return toReturn
 
     def useGetOutOfJailCard(self) -> bool:
@@ -299,8 +291,15 @@ async def on_message(message: discord.Message):
             await gameMode.tradeInfo.get("confirm").add_reaction("✅")
 
     elif messageValue == ("print"):
-        gameMode.tradeInfo["confirm"] = await gameMode.gameMessage.channel.send("AAA")
-        await gameMode.tradeInfo.get("confirm").add_reaction("✅")
+        gameMode.playerList[1].addProperty(getMapItem(6))
+        exchange(
+            gameMode.playerList[0],
+            gameMode.playerList[1],
+            50,
+            0,
+            [],
+            gameMode.playerList[1].properties,
+        )
 
     elif messageValue.startswith("move"):
         await mapMovement(
@@ -408,18 +407,14 @@ def exchange(
     prop1: list[propertyClass],
     prop2: list[propertyClass],
 ):
-
-    player1.value += curr2-curr1
-    player2.value += curr1-curr2
-
-    for i in prop2:
-        player2.removeProperty(player1.addProperty(getMapItem(i.index)))
-    for i in prop1:
-        player1.removeProperty(player2.addProperty(getMapItem(i.index)))
-
-        
+    player1.value += curr2 - curr1
+    player2.value += curr1 - curr2
+    print(prop2)
     
-
+    for i in prop2:
+        player1.addProperty(getMapItem(player2.removeProperty(i).index))
+    for i in prop1:
+        player2.addProperty(getMapItem(player1.removeProperty(i).index))
 
 
 async def tradeTimer(message: discord.Message, countdown: int) -> None:
@@ -505,6 +500,7 @@ async def mapMovement(
         toReturn += str(currPlayer.user) + " has crossed GO. They collect $200.\n"
         currPlayer.value += 200
         currPlayer.map = currPlayer.map % 40
+    print(currPlayer.map)
     prop = getMapItem(currPlayer.map)
     action = [
         str(prop),
@@ -701,9 +697,9 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         if found != None:
             gameMode.tradeInfo["tradeMessage"].cancel()
             if currPlayer == 2:
-                temp=toFindPlayer
-                toFindPlayer=currPlayer
-                currPlayer=temp
+                temp = toFindPlayer
+                toFindPlayer = currPlayer
+                currPlayer = temp
             exchange(
                 currPlayer,
                 toFindPlayer,
@@ -714,7 +710,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 ],
                 gameMode.tradeInfo.get("prop2")[
                     1 : len(gameMode.tradeInfo.get("prop2"))
-                ]
+                ],
             )
             await gameMode.gameMessage.channel.send("Trade has been concluded")
             gameMode.tradeInfo.clear()
