@@ -95,11 +95,11 @@ class playerClass:
     def __str__(self) -> str:
         return str(self.user)
 
-    def addProperty(self, mapItem: mapItemClass) -> propertyClass:
+    def addProperty(self, mapItem: mapItemClass, gameMode) -> propertyClass:
         toReturn: propertyClass = propertyClass(int(mapItem.Index), self)
         self.properties.append(toReturn)
         self.properties = sorted(self.properties, key=lambda x: x.getColorSet())
-
+        gameMode.propertiesOwned.append(toReturn)
         return toReturn
 
     def hasProperty(self, property: propertyClass) -> bool:
@@ -108,13 +108,14 @@ class playerClass:
                 return True
         return False
 
-    def removeProperty(self, property: propertyClass) -> propertyClass:
+    def removeProperty(self, property: propertyClass, gameMode) -> propertyClass:
         toReturn: propertyClass = None
         for i in self.properties:
             if i == property:
                 toReturn = property
                 break
         self.properties.remove(toReturn)
+        gameMode.propertiesOwned.remove(toReturn)
         return toReturn
 
     def useGetOutOfJailCard(self) -> bool:
@@ -135,6 +136,14 @@ class gameModeClass:
         self.playerList: list[playerClass] = []
         self.propertiesOwned: list[propertyClass] = []
         self.tradeInfo = {}
+        """
+        tradeMessage: Countdown coroutine
+        player1: playerClass object 1
+        player2: playerClass object 
+        prop1: list[propertyClass] 1
+        prop2: list[propertyClass] 2
+        confirm: confirmation message object
+        """
 
     def getUser(self, user: discord.Member) -> playerClass:
         currPlayer = None
@@ -144,6 +153,23 @@ class gameModeClass:
                 break
         return currPlayer
 
+    def exchange(
+        self,
+        player1: playerClass,
+        player2: playerClass,
+        curr1: int,
+        curr2: int,
+        prop1: list[propertyClass],
+        prop2: list[propertyClass],
+    ):
+        player1.value += curr2 - curr1
+        player2.value += curr1 - curr2
+
+        for i in prop2:
+            player1.addProperty(getMapItem(player2.removeProperty(i,self).index), self)
+        for i in prop1:
+            player2.addProperty(getMapItem(player1.removeProperty(i,self).index), self)
+
     def getUserFromString(self, user: str) -> playerClass:
         currPlayer = None
         for val in self.playerList:
@@ -151,9 +177,6 @@ class gameModeClass:
                 currPlayer = val
                 break
         return currPlayer
-
-    def registerPropertyOwned(self, property: propertyClass) -> None:
-        self.propertiesOwned.append(property)
 
     def getProperty(self, mapItem: mapItemClass) -> propertyClass:
         toReturn = None
@@ -205,6 +228,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
+
     messageValue = str(message.content.lower())
     gameMode = getGame(message.channel)
     if messageValue.startswith("game start"):
@@ -318,10 +342,10 @@ async def on_message(message: discord.Message):
             await gameMode.tradeInfo.get("confirm").add_reaction("✅")
 
     elif messageValue == ("print"):
-        await gameMode.gameMessage.channel.send(getMapItem(1).printAll())
+        await gameMode.gameMessage.channel.send("print")
+
     elif messageValue.startswith("printer"):
-        val = messageValue.split("printer ")[1]
-        await gameMode.gameMessage.channel.send(getMapItem(int(val)).printAll())
+        print(gameMode.playerList[1].hasProperty(gameMode.getProperty(getMapItem(6))))
 
     elif messageValue.startswith("move"):
         await mapMovement(
@@ -404,7 +428,7 @@ async def on_message(message: discord.Message):
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
-        tradePlayer = gameMode.getUserFromString(message.content.split("trade ")[1])
+        tradePlayer = gameMode.getUserFromString(message.content.split(" ",1)[1])
         if tradePlayer == None:
             await gameMode.gameMessage.channel.send(
                 "If you're trying to trade with another player, please make sure you're entering the correct name."
@@ -421,29 +445,11 @@ async def on_message(message: discord.Message):
         )
 
 
-def exchange(
-    player1: playerClass,
-    player2: playerClass,
-    curr1: int,
-    curr2: int,
-    prop1: list[propertyClass],
-    prop2: list[propertyClass],
-):
-    player1.value += curr2 - curr1
-    player2.value += curr1 - curr2
-    print(prop2)
-
-    for i in prop2:
-        player1.addProperty(getMapItem(player2.removeProperty(i).index))
-    for i in prop1:
-        player2.addProperty(getMapItem(player1.removeProperty(i).index))
-
-
 async def tradeTimer(message: discord.Message, countdown: int) -> None:
     gameMode = getGame(message.channel)
     if gameMode.tradeInfo["tradeMessage"] == None:
         return
-    toReturn = "Starting trade.\nWrite your offer in the format.\n```offer [USER] [AMOUNT] P[index1] P[index2],...```"
+    toReturn = "Starting trade.\nWrite your offer in the format.\n```offer [AMOUNT] P[index1] P[index2],...```"
     timer = await gameMode.gameMessage.channel.send(
         toReturn + "\nCountDown:" + str(countdown)
     )
@@ -451,7 +457,7 @@ async def tradeTimer(message: discord.Message, countdown: int) -> None:
         countdown -= 1
         await asyncio.sleep(1)
         await timer.edit(content=(toReturn + "\nCountDown:" + str(countdown)))
-    toReturn = "Trade Closed"
+    toReturn = "The Trade has been Closed"
     await gameMode.gameMessage.channel.send(toReturn)
     gameMode.tradeInfo.clear()
 
@@ -504,7 +510,7 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
     currPLayer: playerClass = gameMode.getUser(gameMode.auctionMessage[2])
     gameMode.auctionMessage = None
     currPLayer.value -= currBid
-    gameMode.registerPropertyOwned(currPLayer.addProperty(prop))
+    currPLayer.addProperty(prop, gameMode)
 
     await gameMode.gameMessage.channel.send(
         str(currPLayer.user) + " has bought " + str(prop) + " for $" + str(currBid)
@@ -593,7 +599,7 @@ async def mapMovement(
 
             elif comAct[1] == 1:
                 prop: mapItemClass = getMapItem(comAct[2])
-                gameMode.registerPropertyOwned(currPlayer.addProperty(prop))
+                currPlayer.addProperty(prop, gameMode)
 
                 toReturn += "\n" + str(currPlayer.user) + " now has " + str(prop)
             elif comAct[1] == 2:
@@ -675,9 +681,8 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         if reaction.emoji == "1️⃣":
             channel = gameMode.propertySellorAuction[0].channel
             if currPlayer.value >= int(gameMode.propertySellorAuction[2].Cost):
-                gameMode.registerPropertyOwned(
-                    currPlayer.addProperty(gameMode.propertySellorAuction[2])
-                )
+                currPlayer.addProperty(gameMode.propertySellorAuction[2], gameMode)
+
                 currPlayer.value -= int(gameMode.propertySellorAuction[2].Cost)
 
                 toReturn = (
@@ -701,39 +706,29 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
                 + ". Please place your bids by typing 'bid NUMBER'"
             )
     if gameMode.tradeInfo.get("confirm") == reaction.message and reaction.emoji == "✅":
-        currPlayer = gameMode.getUser(reaction.message.author)
-
-        if currPlayer == gameMode.tradeInfo.get("player1"):
-            currPlayerNum = 1
-            toFindPlayer = gameMode.tradeInfo.get("player2")
-        else:
-            currPlayerNum = 2
-            toFindPlayer = gameMode.tradeInfo.get("player1")
-        found = None
+        player1 = None
+        player2 = None
         for reaction in reaction.message.reactions:
+            if reaction.emoji != "✅":
+                continue
             async for user in reaction.users():
-                if gameMode.getUser(user) == toFindPlayer:
-                    found = gameMode.getUser(user)
+                if gameMode.getUser(user) == gameMode.tradeInfo.get("player1"):
+                    player1 = gameMode.tradeInfo.get("player1")
+                elif gameMode.getUser(user) == gameMode.tradeInfo.get("player2"):
+                    player2 = gameMode.tradeInfo.get("player2")
+                if player1 != None and player2 != None:
                     break
-        if found != None:
+        if player1 != None and player2 != None:
             gameMode.tradeInfo["tradeMessage"].cancel()
-            if currPlayer == 2:
-                temp = toFindPlayer
-                toFindPlayer = currPlayer
-                currPlayer = temp
-            exchange(
-                currPlayer,
-                toFindPlayer,
+            gameMode.exchange(
+                player1,
+                player2,
                 gameMode.tradeInfo.get("prop1")[0],
                 gameMode.tradeInfo.get("prop2")[0],
-                gameMode.tradeInfo.get("prop1")[
-                    1 : len(gameMode.tradeInfo.get("prop1"))
-                ],
-                gameMode.tradeInfo.get("prop2")[
-                    1 : len(gameMode.tradeInfo.get("prop2"))
-                ],
+                gameMode.tradeInfo.get("prop1")[1:],
+                gameMode.tradeInfo.get("prop2")[1:],
             )
-            await gameMode.gameMessage.channel.send("Trade has been concluded")
+            await gameMode.gameMessage.channel.send("The Trade has been concluded")
             gameMode.tradeInfo.clear()
 
     if (
@@ -771,7 +766,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         elif reaction.emoji == "2️⃣":
             card: mapItemClass = getMapItem(40)
             if currPlayer.hasProperty(card):
-                currPlayer.removeProperty(card)
+                currPlayer.removeProperty(card,gameMode)
                 toReturn = str(currPlayer) + " has used their " + str(card)
             else:
                 await gameMode.gameMessage.channel.send(
