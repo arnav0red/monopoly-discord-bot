@@ -1,4 +1,4 @@
-import discord, random, string, asyncio, pandas
+import discord, random, string, asyncio, pandas, math
 
 
 class mapItemClass:
@@ -16,44 +16,51 @@ class mapItemClass:
     def __init__(self, listVals):
         self.PropertyUS = listVals[0]
         self.PropertyInternational = listVals[1]
-        self.Cost = listVals[2]
-        self.Site = listVals[3]
-        self.ColorSet = listVals[4]
-        self.H1 = listVals[5]
-        self.H2 = listVals[6]
-        self.H3 = listVals[7]
-        self.H4 = listVals[8]
-        self.Hotel = listVals[9]
-        self.BuildingCost = listVals[10]
-        self.Mortgage = listVals[11]
-        self.UnmortgageCost = listVals[12]
-        self.Index = listVals[13]
         self.Emoji = listVals[14]
-        self.Action = listVals[15]
+
+        def ifNotNan(val: float):
+            if math.isnan(val):
+                return None
+            else:
+                return int(val)
+
+        self.Cost = ifNotNan(listVals[2])
+        self.Site = ifNotNan(listVals[3])
+        self.ColorSet = ifNotNan(listVals[4])
+        self.H1 = ifNotNan(listVals[5])
+        self.H2 = ifNotNan(listVals[6])
+        self.H3 = ifNotNan(listVals[7])
+        self.H4 = ifNotNan(listVals[8])
+        self.Hotel = ifNotNan(listVals[9])
+        self.BuildingCost = ifNotNan(listVals[10])
+        self.Mortgage = ifNotNan(listVals[11])
+        self.UnmortgageCost = ifNotNan(listVals[12])
+        self.Index = ifNotNan(listVals[13])
+        self.Action = ifNotNan(listVals[15])
 
     def __str__(self) -> str:
         toReturn = str(self.Emoji) + " "
         toReturn += self.PropertyInternational
         return toReturn
-    
+
     def printAll(self):
-        toReturn=""
-        toReturn+=str(self.PropertyUS)+" "
-        toReturn+=str(self.PropertyInternational)+" "
-        toReturn+=str(self.Cost)+" "
-        toReturn+=str(self.Site)+" "
-        toReturn+=str(self.ColorSet)+" "
-        toReturn+=str(self.H1)+" "
-        toReturn+=str(self.H2)+" "
-        toReturn+=str(self.H3)+" "
-        toReturn+=str(self.H4)+" "
-        toReturn+=str(self.Hotel)+" "
-        toReturn+=str(self.BuildingCost)+" "
-        toReturn+=str(self.Mortgage)+" "
-        toReturn+=str(self.UnmortgageCost)+" "
-        toReturn+=str(self.Index)+" "
-        toReturn+=str(self.Emoji)+" "
-        toReturn+=str(self.Action)+" "
+        toReturn = ""
+        toReturn += str(self.PropertyUS) + " "
+        toReturn += str(self.PropertyInternational) + " "
+        toReturn += str(self.Cost) + " "
+        toReturn += str(self.Site) + " "
+        toReturn += str(self.ColorSet) + " "
+        toReturn += str(self.H1) + " "
+        toReturn += str(self.H2) + " "
+        toReturn += str(self.H3) + " "
+        toReturn += str(self.H4) + " "
+        toReturn += str(self.Hotel) + " "
+        toReturn += str(self.BuildingCost) + " "
+        toReturn += str(self.Mortgage) + " "
+        toReturn += str(self.UnmortgageCost) + " "
+        toReturn += str(self.Index) + " "
+        toReturn += str(self.Emoji) + " "
+        toReturn += str(self.Action) + " "
         return toReturn
 
 
@@ -89,9 +96,9 @@ class playerClass:
         return str(self.user)
 
     def addProperty(self, mapItem: mapItemClass) -> propertyClass:
-        toReturn:propertyClass=propertyClass(int(mapItem.Index), self)
+        toReturn: propertyClass = propertyClass(int(mapItem.Index), self)
         self.properties.append(toReturn)
-        self.properties=sorted(self.properties, key=lambda x: x.getColorSet())
+        self.properties = sorted(self.properties, key=lambda x: x.getColorSet())
 
         return toReturn
 
@@ -425,7 +432,7 @@ def exchange(
     player1.value += curr2 - curr1
     player2.value += curr1 - curr2
     print(prop2)
-    
+
     for i in prop2:
         player1.addProperty(getMapItem(player2.removeProperty(i).index))
     for i in prop1:
@@ -515,7 +522,6 @@ async def mapMovement(
         toReturn += str(currPlayer.user) + " has crossed GO. They collect $200.\n"
         currPlayer.value += 200
         currPlayer.map = currPlayer.map % 40
-    print(currPlayer.map)
     prop = getMapItem(currPlayer.map)
     action = [
         str(prop),
@@ -614,7 +620,7 @@ async def mapMovement(
                 "\n"
                 + str(currPlayer.user)
                 + " pays $"
-                + getMapItem(currPlayer.map).Cost
+                + str(getMapItem(currPlayer.map).Cost)
             )
             currPlayer.value -= int(getMapItem(currPlayer.map).Cost)
 
@@ -931,7 +937,7 @@ def dice():
 
 
 reader = pandas.read_excel("./resources/info.xlsx")
-for row in reader.values[1:]:
+for row in reader.values:
     mapItemList.append(mapItemClass(row))
 
 client.run(token)
