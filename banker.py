@@ -1,4 +1,4 @@
-import discord, random, string, asyncio, pickle, os, csv, time
+import discord, random, string, asyncio, pandas
 
 
 class mapItemClass:
@@ -32,8 +32,28 @@ class mapItemClass:
         self.Action = listVals[15]
 
     def __str__(self) -> str:
-        toReturn = self.Emoji + " "
+        toReturn = str(self.Emoji) + " "
         toReturn += self.PropertyInternational
+        return toReturn
+    
+    def printAll(self):
+        toReturn=""
+        toReturn+=str(self.PropertyUS)+" "
+        toReturn+=str(self.PropertyInternational)+" "
+        toReturn+=str(self.Cost)+" "
+        toReturn+=str(self.Site)+" "
+        toReturn+=str(self.ColorSet)+" "
+        toReturn+=str(self.H1)+" "
+        toReturn+=str(self.H2)+" "
+        toReturn+=str(self.H3)+" "
+        toReturn+=str(self.H4)+" "
+        toReturn+=str(self.Hotel)+" "
+        toReturn+=str(self.BuildingCost)+" "
+        toReturn+=str(self.Mortgage)+" "
+        toReturn+=str(self.UnmortgageCost)+" "
+        toReturn+=str(self.Index)+" "
+        toReturn+=str(self.Emoji)+" "
+        toReturn+=str(self.Action)+" "
         return toReturn
 
 
@@ -291,15 +311,10 @@ async def on_message(message: discord.Message):
             await gameMode.tradeInfo.get("confirm").add_reaction("✅")
 
     elif messageValue == ("print"):
-        gameMode.playerList[1].addProperty(getMapItem(6))
-        exchange(
-            gameMode.playerList[0],
-            gameMode.playerList[1],
-            50,
-            0,
-            [],
-            gameMode.playerList[1].properties,
-        )
+        await gameMode.gameMessage.channel.send(getMapItem(1).printAll())
+    elif messageValue.startswith("printer"):
+        val = messageValue.split("printer ")[1]
+        await gameMode.gameMessage.channel.send(getMapItem(int(val)).printAll())
 
     elif messageValue.startswith("move"):
         await mapMovement(
@@ -915,10 +930,8 @@ def dice():
     return roll1, roll2, com
 
 
-with open("./resources/info.csv", "r") as file:
-    reader = csv.reader(file)
-    next(reader)
-    for row in reader:
-        mapItemList.append(mapItemClass(row))
+reader = pandas.read_excel("./resources/info.xlsx")
+for row in reader.values[1:]:
+    mapItemList.append(mapItemClass(row))
 
 client.run(token)
