@@ -81,7 +81,9 @@ class propertyClass:
     def getColorSet(self) -> int:
         return int(getMapItem(self.index).ColorSet)
 
-    def getRent(self) -> int:
+    def getRent(self, diceVal: int) -> int:
+        if getMapItem(self.index).Action == 6:
+            return 4 * diceVal
         return int(getMapItem(self.index).Site)
 
 
@@ -166,9 +168,9 @@ class gameModeClass:
         player2.value += curr1 - curr2
 
         for i in prop2:
-            player1.addProperty(getMapItem(player2.removeProperty(i,self).index), self)
+            player1.addProperty(getMapItem(player2.removeProperty(i, self).index), self)
         for i in prop1:
-            player2.addProperty(getMapItem(player1.removeProperty(i,self).index), self)
+            player2.addProperty(getMapItem(player1.removeProperty(i, self).index), self)
 
     def getUserFromString(self, user: str) -> playerClass:
         currPlayer = None
@@ -228,7 +230,6 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
-
     messageValue = str(message.content.lower())
     gameMode = getGame(message.channel)
     if messageValue.startswith("game start"):
@@ -347,7 +348,7 @@ async def on_message(message: discord.Message):
     elif messageValue.startswith("printer"):
         print(gameMode.playerList[1].hasProperty(gameMode.getProperty(getMapItem(6))))
 
-    elif messageValue.startswith("move"):
+    elif messageValue.startswith("move "):
         await mapMovement(
             gameMode.getUser(message.author),
             ["test", "test", int(messageValue.split("move ")[1])],
@@ -428,7 +429,7 @@ async def on_message(message: discord.Message):
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
             )
             return
-        tradePlayer = gameMode.getUserFromString(message.content.split(" ",1)[1])
+        tradePlayer = gameMode.getUserFromString(message.content.split(" ", 1)[1])
         if tradePlayer == None:
             await gameMode.gameMessage.channel.send(
                 "If you're trying to trade with another player, please make sure you're entering the correct name."
@@ -548,13 +549,14 @@ async def mapMovement(
         + " has landed on "
         + action[0]
     )
-    if action[1] == 2:
+    if action[1] == 2 or action[1] == 5 or action[1] == 6:
         await channel.send(toReturn)
         await channel.send(file=discord.File(action[2]))
         if gameMode.getProperty(prop) == None:
-            toReturn = (
-                "\nCost: " + str(prop.Cost) + "\nWould you like to \n1.Buy\n2.Auction"
-            )
+            toReturn = "\nCost: " + str(prop.Cost) + "\nWould you like to \n1.Buy"
+            if action[1] == 2:
+                toReturn += "\n2.Auction"
+
             # 0:message, 1:player
             gameMode.propertySellorAuction = [
                 await channel.send(toReturn),
@@ -562,7 +564,8 @@ async def mapMovement(
                 prop,
             ]
             await gameMode.propertySellorAuction[0].add_reaction("1️⃣")
-            await gameMode.propertySellorAuction[0].add_reaction("2️⃣")
+            if action[1] == 2:
+                await gameMode.propertySellorAuction[0].add_reaction("2️⃣")
         elif gameMode.getProperty(prop).owner == currPlayer:
             toReturn = "Welcome to your property"
             await channel.send(toReturn)
@@ -571,18 +574,18 @@ async def mapMovement(
             toReturn = (
                 "\nProperty: "
                 + str(property)
-                + "is owned by "
+                + " is owned by "
                 + str(property.owner)
                 + "\n"
                 + str(currPlayer.user)
                 + " pays "
                 + str(property.owner)
                 + " $"
-                + str(property.getRent())
+                + str(property.getRent(num[2]))
             )
-            if currPlayer.value >= property.getRent():
-                currPlayer.value -= property.getRent()
-                property.owner.value += property.getRent()
+            if currPlayer.value >= property.getRent(num[2]):
+                currPlayer.value -= property.getRent(num[2])
+                property.owner.value += property.getRent(num[2])
             else:
                 toReturn += (
                     str(currPlayer.user)
@@ -766,7 +769,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         elif reaction.emoji == "2️⃣":
             card: mapItemClass = getMapItem(40)
             if currPlayer.hasProperty(card):
-                currPlayer.removeProperty(card,gameMode)
+                currPlayer.removeProperty(card, gameMode)
                 toReturn = str(currPlayer) + " has used their " + str(card)
             else:
                 await gameMode.gameMessage.channel.send(
