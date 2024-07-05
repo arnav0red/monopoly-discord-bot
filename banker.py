@@ -1,4 +1,4 @@
-import discord, random, string, asyncio, pandas, math
+import discord, random, string, asyncio, pandas, math, json, os
 
 
 class mapItemClass:
@@ -37,6 +37,10 @@ class mapItemClass:
         self.UnmortgageCost = ifNotNan(listVals[12])
         self.Index = ifNotNan(listVals[13])
         self.Action = ifNotNan(listVals[15])
+
+    """
+asd
+"""
 
     def __str__(self) -> str:
         toReturn = str(self.Emoji) + " "
@@ -120,10 +124,6 @@ class playerClass:
         gameMode.propertiesOwned.remove(toReturn)
         return toReturn
 
-    def useGetOutOfJailCard(self) -> bool:
-        if getMapItem(40):
-            pass
-
 
 class gameModeClass:
     def __init__(
@@ -134,7 +134,7 @@ class gameModeClass:
         self.jailMessage: discord.TextChannel = None
         self.propertySellorAuction = None
         self.auctionMessage = None
-        self.timer: discord.TextChannel = None
+        self.timer: asyncio.Task = None
         self.playerList: list[playerClass] = []
         self.propertiesOwned: list[propertyClass] = []
         self.tradeInfo = {}
@@ -199,7 +199,7 @@ def getMapItem(num: int) -> mapItemClass:
 
 
 mapItemList: list[mapItemClass] = []
-hostedGames: list[gameModeClass] = []
+hostedGames: set[gameModeClass] = set()
 
 
 def getGame(channel: discord.TextChannel) -> gameModeClass:
@@ -212,7 +212,8 @@ def getGame(channel: discord.TextChannel) -> gameModeClass:
 
 
 # TODO: changing gameMessage for testing
-debug = True
+if os.path.isfile("debug"):
+    debug = True
 
 
 client = discord.Client(intents=discord.Intents.all())
@@ -243,7 +244,7 @@ async def on_message(message: discord.Message):
             "Starting game.\nTo participate react with 🚩 to the game start message"
         )
         gameMode = gameMode = gameModeClass(gameMessage)
-        hostedGames.append(gameMode)
+        hostedGames.add(gameMode)
 
         await gameMode.gameMessage.add_reaction("🚩")
 
@@ -254,7 +255,7 @@ async def on_message(message: discord.Message):
     notInList = debug
     if debug and gameMode == None:
         gameMode = gameModeClass(message)
-        hostedGames.append(gameMode)
+        hostedGames.add(gameMode)
 
     for val in gameMode.playerList:
         if val.user == message.author:
@@ -343,7 +344,8 @@ async def on_message(message: discord.Message):
             await gameMode.tradeInfo.get("confirm").add_reaction("✅")
 
     elif messageValue == ("print"):
-        await gameMode.gameMessage.channel.send("print")
+        for i in range(10):
+            print(com())
 
     elif messageValue.startswith("printer"):
         print(gameMode.playerList[1].hasProperty(gameMode.getProperty(getMapItem(6))))
@@ -392,7 +394,7 @@ async def on_message(message: discord.Message):
                 await gameMode.gameMessage.channel.send(toReturn)
                 if gameMode.timer != None and not gameMode.timer.done():
                     gameMode.timer.cancel()
-                gameMode.timer: asyncio.Task = asyncio.create_task(
+                gameMode.timer = asyncio.create_task(
                     auctionTimer(gameMode.gameMessage.channel, 5)
                 )
     elif messageValue == ("sudo com"):
@@ -407,6 +409,10 @@ async def on_message(message: discord.Message):
             )
             return
         await listUser(gameMode.gameMessage.channel, currPlayer)
+    elif messageValue == ("list all"):
+        for i in gameMode.playerList:
+            await listUser(gameMode.gameMessage.channel, i)
+
     elif messageValue == ("dice"):
         num = dice()
         toReturn = (
@@ -422,11 +428,16 @@ async def on_message(message: discord.Message):
         await gameMode.gameMessage.channel.send(toReturn)
     elif messageValue == ("roll"):
         await rollDice(gameMode.gameMessage.channel, gameMode.getUser(message.author))
-    elif messageValue.startswith("trade "):
+    elif messageValue.startswith("trade"):
         currPlayer = gameMode.getUser(message.author)
         if currPlayer == None:
             await gameMode.gameMessage.channel.send(
                 "Huh! Weird that you're not in the game. Please react to the game start message to be added."
+            )
+            return
+        elif len(messageValue.split(" ")) < 2:
+            await gameMode.gameMessage.channel.send(
+                "If you're trying to trade with another player, the command is ```trade JohnDoe```"
             )
             return
         tradePlayer = gameMode.getUserFromString(message.content.split(" ", 1)[1])
@@ -444,6 +455,9 @@ async def on_message(message: discord.Message):
         gameMode.tradeInfo["tradeMessage"] = asyncio.create_task(
             tradeTimer(message, 120)
         )
+    elif messageValue == ("game close"):
+        hostedGames.remove(gameMode)
+        await message.channel.send("Closing Game")
 
 
 async def tradeTimer(message: discord.Message, countdown: int) -> None:
@@ -596,7 +610,6 @@ async def mapMovement(
         if action[1] == 0:
             comAct = com()
             toReturn += "\n" + comAct[0]
-
             if comAct[1] == 0:
                 currPlayer.value += comAct[2]
 
@@ -607,10 +620,10 @@ async def mapMovement(
                 toReturn += "\n" + str(currPlayer.user) + " now has " + str(prop)
             elif comAct[1] == 2:
                 for i in gameMode.playerList:
-                    if i.user == currPlayer:
+                    if i == currPlayer:
                         continue
                     i.value -= comAct[2]
-                currPlayer.value += comAct[2]
+                    currPlayer.value += comAct[2]
 
             elif comAct[1] == 3:
                 currPlayer.map = -1
@@ -835,7 +848,7 @@ def com():
         changeValue = 20
     elif cd == 10:
         com = "It is your birthday. Collect $10 from every player"
-        action = 0
+        action = 2
         changeValue = 10
     elif cd == 11:
         com = "Life insurance matures - Collect $100"
