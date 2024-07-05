@@ -1,8 +1,11 @@
 import discord, random, string, asyncio, pandas, math, json, os
 
 
+# classes
 class mapItemClass:
-    """Action:
+    """
+    Class storing information about each tile. Corresponds to extra/info.xlsx
+    Action:
     -1: None
     0: Community Chest
     1: Chance
@@ -69,6 +72,10 @@ asd
 
 
 class propertyClass:
+    """
+    Class storing information about each property owned by a user
+    """
+
     def __init__(self, index: int, owner):
         self.index = index
         self.owner = owner
@@ -92,6 +99,10 @@ class propertyClass:
 
 
 class playerClass:
+    """
+    Class storing information about each player
+    """
+
     def __init__(self, user):
         self.user: discord.Member = user
         self.value: int = 1500
@@ -126,6 +137,10 @@ class playerClass:
 
 
 class gameModeClass:
+    """
+    Class where each instance is an ongoing game
+    """
+
     def __init__(
         self,
         gameMessage,
@@ -189,7 +204,39 @@ class gameModeClass:
         return toReturn
 
 
+# variable
+hostedGames: set[gameModeClass] = set()
+"""set of all ongoing games"""
+mapItemList: list[mapItemClass] = []
+"""all the stored map information from info.xlsx"""
+client = discord.Client(intents=discord.Intents.all())
+debug = False
+
+
+# regular methods
+def main():
+    # TODO: changing gameMessage for testing
+    if os.path.isfile("debug"):
+        debug = True
+    if not os.path.isfile("config.txt"):
+        print("enter token for bot")
+        with open("config.txt", "w") as file:
+            file.write(input())
+
+    with open("config.txt", "r") as fileRead:
+        token = fileRead.read()
+
+    reader = pandas.read_excel("./resources/info.xlsx")
+    for row in reader.values:
+        mapItemList.append(mapItemClass(row))
+
+    client.run(token)
+
+
 def getMapItem(num: int) -> mapItemClass:
+    """Matches the index number for its corresponding tile information
+    Returns: mapItemClass with matching index. If match isn't found, returns None
+    """
     prop = None
     for i in mapItemList:
         if int(i.Index) == num:
@@ -198,11 +245,10 @@ def getMapItem(num: int) -> mapItemClass:
     return prop
 
 
-mapItemList: list[mapItemClass] = []
-hostedGames: set[gameModeClass] = set()
-
-
 def getGame(channel: discord.TextChannel) -> gameModeClass:
+    """Returns the ongoing game for a given discord text channel
+    Returns: gameModeClass, or None if not matched
+    """
     toReturn = None
     for i in hostedGames:
         if i.gameMessage.channel == channel:
@@ -211,19 +257,167 @@ def getGame(channel: discord.TextChannel) -> gameModeClass:
     return toReturn
 
 
-# TODO: changing gameMessage for testing
-if os.path.isfile("debug"):
-    debug = True
+def com():
+    """
+    To keep track of actions:
+    -1: None
+    0: Change currency
+    1: Gain Property changeValue
+    2: Collect changeValue from each player
+    3: Go to Jail
+    """
+    action = -1
+    # toTrackChangeInCurrency
+    changeValue = 0
+    cd = random.randint(1, 17)
+    if cd == 1:
+        com = "Advance to 'Go'. (Collect $200)"
+        action = 0
+        changeValue = 200
+    elif cd == 2:
+        com = "Bank error in your favor. Collect $200"
+        action = 0
+        changeValue = 200
+    elif cd == 3:
+        com = "Doctor's fees. Pay $50"
+        action = 0
+        changeValue = -50
+    elif cd == 4:
+        com = "From sale of stock you get $50"
+        action = 0
+        changeValue = 50
+    elif cd == 5:
+        com = "Get Out of Jail Free. This card may be kept until needed or sold/traded."
+        action = 1
+        changeValue = 40
+    elif cd == 6:
+        com = "Go to Jail. Go directly to jail. Do not pass Go, Do not collect $200"
+        action = 3
+    elif cd == 7:
+        com = (
+            "Grand Opera Night. Collect $50 from every player for opening night seats."
+        )
+        action = 2
+        changeValue = 50
+    elif cd == 8:
+        com = "Holiday Fund matures. Receive $100"
+        action = 0
+        changeValue = 100
+    elif cd == 9:
+        com = "Income tax refund. Collect $20"
+        action = 0
+        changeValue = 20
+    elif cd == 10:
+        com = "It is your birthday. Collect $10 from every player"
+        action = 2
+        changeValue = 10
+    elif cd == 11:
+        com = "Life insurance matures - Collect $100"
+        action = 0
+        changeValue = 100
+    elif cd == 12:
+        com = "Hospital Fees. Pay $50"
+        action = 0
+        changeValue = -50
+    elif cd == 13:
+        com = "School fees. Pay $50"
+        action = 0
+        changeValue = -50
+    elif cd == 14:
+        com = "Receive $25 consultancy fee"
+        action = 0
+        changeValue = 25
+    elif cd == 15:
+        com = "You are assessed for street repairs: Pay $40 per house and $115 per hotel you own."
+    elif cd == 16:
+        com = "You have won second prize in a beauty contest. Collect $10"
+        action = 0
+        changeValue = 10
+    elif cd == 17:
+        com = "You inherit $100"
+        action = 0
+        changeValue = 100
+    return com, action, changeValue
 
 
-client = discord.Client(intents=discord.Intents.all())
+def cnc():
+    """
+    To keep track of actions:
+    -1: None
+    0: Change currency
+    1: Gain Property
+    2: Collect changeValue from each player
+    3: Go to Jail
+    """
+    action = -1
+    # toTrackChangeInCurrency
+    changeValue = 0
+    cd = random.randint(1, 17)
+    if cd == 1:
+        com = "Advance to 'Go'. (Collect $200)"
+        action = 0
+        changeValue = 200
+    elif cd == 2:
+        com = "Advance to Trafalgar Square. If you pass Go, collect $200"
+    elif cd == 3:
+        com = "Advance to Pall Mall. If you pass Go, collect $200"
+    elif cd == 4:
+        com = "Advance token to nearest Utility. If unowned, you may buy it from the Bank. If owned, throw dice and pay owner a total 10 (ten) times the amount thrown"
+    elif cd == 5:
+        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
+    elif cd == 6:
+        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
+    elif cd == 7:
+        com = "Bank pays you dividend of $50."
+        action = 0
+        changeValue = 50
+    elif cd == 8:
+        com = "Get out of Jail Free. This card may be kept until needed, or traded/sold.{This card may be kept until needed or sold/traded.)"
+    elif cd == 9:
+        com = "Go Back Three {3} Spaces"
+    elif cd == 10:
+        com = "Go to Jail. Go directly to Jail. Do not pass GO, do not collect $200."
+        action = 3
+    elif cd == 11:
+        com = "Make general repairs on all your property: For each house pay $25, For each hotel pay $100"
+    elif cd == 12:
+        com = "Pay poor tax of $15"
+        action = 0
+        changeValue = -15
+    elif cd == 13:
+        com = "Take a ride to King's Cross Station. If you pass Go, collect $200"
+    elif cd == 14:
+        com = "Take a walk on the board walk. Advance token to Mayfair"
+    elif cd == 15:
+        com = "You have been elected Chairman of the Board. Pay each player $50."
+    elif cd == 16:
+        com = "Your building loan matures. Receive $150"
+        action = 0
+        changeValue = 150
+    elif cd == 17:
+        com = "You have won a crossword competition. Collect $100"
+        action = 0
+        changeValue = 100
+    return com, action, changeValue
 
-with open("config.txt", "r") as fileRead:
-    token = fileRead.read()
+
+def dice():
+    """Simulates dice roll
+    Returns: Tuple of order (First roll, Second roll, Sum of the rolls)"""
+    roll1 = random.randint(1, 6)
+    roll2 = random.randint(1, 6)
+    com = roll1 + roll2
+    return roll1, roll2, com
+
+
+# async methods
 
 
 @client.event
 async def on_ready():
+    """
+    Sends command when bot is ready. In debugging mode also sends a command to the relevant channel
+    """
     print("We have logged in as {0.user}".format(client))
     if debug:
         await client.get_channel(1089298595905274016).send("DEBUGGING")
@@ -231,6 +425,9 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
+    """
+    Executes on recieving specific messages.
+    """
     messageValue = str(message.content.lower())
     gameMode = getGame(message.channel)
     if messageValue.startswith("game start"):
@@ -461,6 +658,7 @@ async def on_message(message: discord.Message):
 
 
 async def tradeTimer(message: discord.Message, countdown: int) -> None:
+    """Creates an asynchronous timer for trade for a given message and countdown length"""
     gameMode = getGame(message.channel)
     if gameMode.tradeInfo["tradeMessage"] == None:
         return
@@ -478,6 +676,7 @@ async def tradeTimer(message: discord.Message, countdown: int) -> None:
 
 
 async def listUser(channel: discord.TextChannel, currPlayer: playerClass) -> None:
+    """Sends information in the given channel about currPlayer"""
     toReturn = str(currPlayer.user) + "'s Account\nBalance: $" + str(currPlayer.value)
     toReturn += "\nProperties: "
     for i in currPlayer.properties:
@@ -486,6 +685,8 @@ async def listUser(channel: discord.TextChannel, currPlayer: playerClass) -> Non
 
 
 async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> None:
+    """
+    Rolls dice and runs the command based on where player lands"""
     gameMode = getGame(channel)
 
     if currPlayer == None:
@@ -510,6 +711,7 @@ async def rollDice(channel: discord.TextChannel, currPlayer: playerClass) -> Non
 
 
 async def auctionTimer(channel: discord.TextChannel, countdown: int):
+    """Creates an asynchronous timer for an auction"""
     gameMode = getGame(channel)
 
     if gameMode.auctionMessage == None:
@@ -535,6 +737,7 @@ async def auctionTimer(channel: discord.TextChannel, countdown: int):
 async def mapMovement(
     currPlayer: playerClass, num: list[int], channel: discord.TextChannel
 ):
+    """Executes command based on landing location"""
     gameMode = getGame(channel)
 
     toReturn = ""
@@ -796,159 +999,5 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
         await escapeJail(currPlayer, gameMode.gameMessage.channel, toReturn, num)
 
 
-def com():
-    """
-    To keep track of actions:
-    -1: None
-    0: Change currency
-    1: Gain Property changeValue
-    2: Collect changeValue from each player
-    3: Go to Jail
-    """
-    action = -1
-    # toTrackChangeInCurrency
-    changeValue = 0
-    cd = random.randint(1, 17)
-    if cd == 1:
-        com = "Advance to 'Go'. (Collect $200)"
-        action = 0
-        changeValue = 200
-    elif cd == 2:
-        com = "Bank error in your favor. Collect $200"
-        action = 0
-        changeValue = 200
-    elif cd == 3:
-        com = "Doctor's fees. Pay $50"
-        action = 0
-        changeValue = -50
-    elif cd == 4:
-        com = "From sale of stock you get $50"
-        action = 0
-        changeValue = 50
-    elif cd == 5:
-        com = "Get Out of Jail Free. This card may be kept until needed or sold/traded."
-        action = 1
-        changeValue = 40
-    elif cd == 6:
-        com = "Go to Jail. Go directly to jail. Do not pass Go, Do not collect $200"
-        action = 3
-    elif cd == 7:
-        com = (
-            "Grand Opera Night. Collect $50 from every player for opening night seats."
-        )
-        action = 2
-        changeValue = 50
-    elif cd == 8:
-        com = "Holiday Fund matures. Receive $100"
-        action = 0
-        changeValue = 100
-    elif cd == 9:
-        com = "Income tax refund. Collect $20"
-        action = 0
-        changeValue = 20
-    elif cd == 10:
-        com = "It is your birthday. Collect $10 from every player"
-        action = 2
-        changeValue = 10
-    elif cd == 11:
-        com = "Life insurance matures - Collect $100"
-        action = 0
-        changeValue = 100
-    elif cd == 12:
-        com = "Hospital Fees. Pay $50"
-        action = 0
-        changeValue = -50
-    elif cd == 13:
-        com = "School fees. Pay $50"
-        action = 0
-        changeValue = -50
-    elif cd == 14:
-        com = "Receive $25 consultancy fee"
-        action = 0
-        changeValue = 25
-    elif cd == 15:
-        com = "You are assessed for street repairs: Pay $40 per house and $115 per hotel you own."
-    elif cd == 16:
-        com = "You have won second prize in a beauty contest. Collect $10"
-        action = 0
-        changeValue = 10
-    elif cd == 17:
-        com = "You inherit $100"
-        action = 0
-        changeValue = 100
-    return com, action, changeValue
-
-
-def cnc():
-    """
-    To keep track of actions:
-    -1: None
-    0: Change currency
-    1: Gain Property
-    2: Collect changeValue from each player
-    3: Go to Jail
-    """
-    action = -1
-    # toTrackChangeInCurrency
-    changeValue = 0
-    cd = random.randint(1, 17)
-    if cd == 1:
-        com = "Advance to 'Go'. (Collect $200)"
-        action = 0
-        changeValue = 200
-    elif cd == 2:
-        com = "Advance to Trafalgar Square. If you pass Go, collect $200"
-    elif cd == 3:
-        com = "Advance to Pall Mall. If you pass Go, collect $200"
-    elif cd == 4:
-        com = "Advance token to nearest Utility. If unowned, you may buy it from the Bank. If owned, throw dice and pay owner a total 10 (ten) times the amount thrown"
-    elif cd == 5:
-        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
-    elif cd == 6:
-        com = "Advance token to the nearest Railroad and pay owner twice the rental to which he/she is otherwise entitled. If Railroad is unowned, you may buy it from the Bank"
-    elif cd == 7:
-        com = "Bank pays you dividend of $50."
-        action = 0
-        changeValue = 50
-    elif cd == 8:
-        com = "Get out of Jail Free. This card may be kept until needed, or traded/sold.{This card may be kept until needed or sold/traded.)"
-    elif cd == 9:
-        com = "Go Back Three {3} Spaces"
-    elif cd == 10:
-        com = "Go to Jail. Go directly to Jail. Do not pass GO, do not collect $200."
-        action = 3
-    elif cd == 11:
-        com = "Make general repairs on all your property: For each house pay $25, For each hotel pay $100"
-    elif cd == 12:
-        com = "Pay poor tax of $15"
-        action = 0
-        changeValue = -15
-    elif cd == 13:
-        com = "Take a ride to King's Cross Station. If you pass Go, collect $200"
-    elif cd == 14:
-        com = "Take a walk on the board walk. Advance token to Mayfair"
-    elif cd == 15:
-        com = "You have been elected Chairman of the Board. Pay each player $50."
-    elif cd == 16:
-        com = "Your building loan matures. Receive $150"
-        action = 0
-        changeValue = 150
-    elif cd == 17:
-        com = "You have won a crossword competition. Collect $100"
-        action = 0
-        changeValue = 100
-    return com, action, changeValue
-
-
-def dice():
-    roll1 = random.randint(1, 6)
-    roll2 = random.randint(1, 6)
-    com = roll1 + roll2
-    return roll1, roll2, com
-
-
-reader = pandas.read_excel("./resources/info.xlsx")
-for row in reader.values:
-    mapItemList.append(mapItemClass(row))
-
-client.run(token)
+if __name__ == "__main__":
+    main()
